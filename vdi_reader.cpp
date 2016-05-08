@@ -5,7 +5,7 @@
 #include <sys/types.h>
 #include <unistd.h>
 
-/* VDI reader should read the VDI header and populate the VDI header structure*/
+/* VDI reader should read the VDI header and populate the VDI header structure, and read the VDI Map into pageMap*/
 
 using namespace std;
 
@@ -19,13 +19,25 @@ vdi_reader::vdi_reader(string fs){
 
   ::read(fd,&hdr,sizeof(hdr));
 
-  cout << hdr.offsetData << endl; //2097152
+  cout << "VDI Header Information:" << endl;
+  cout << "Offset: " << hdr.offsetData << endl; //2097152
+  cout << "Magic Number: " << hdr.magic << endl; 
+  cout << "Header Size: " << hdr.headerSize << endl; 
+  cout << "Offset Pages: " << hdr.offsetPages << endl; 
+  cout << "Disk Size: " << hdr.diskSize << endl; 
+  cout << "Sector Size: " << hdr.sectorSize<< endl; 
+  cout << "Page Size: " << hdr.pageSize<< endl; 
+  cout << "Page Extra: " << hdr.pageExtra<< endl; 
+  cout << "Total Pages: " << hdr.totalPages<< endl; 
+  cout << "Pages Allocated: " << hdr.pagesAllocated<< endl; 
 
   ::lseek(fd,hdr.offsetPages,SEEK_SET);
 
-  pageMap = new int[hdr.totalPages];
+  pageMap = new int[hdr.totalPages]; //totalPages is the same as offsetBlocks? Value is 128
 
-  ::read(fd,pageMap,hdr.totalPages*sizeof(int));
+  ::read(fd,pageMap,hdr.totalPages*sizeof(int)); // totalPages is the same as nBlocks? (128 * 4?)
+  
+  cout << "VDI Map: " << pageMap<< endl; // this address corresponds to the start of VDI Map?
 
 }
 
@@ -39,7 +51,7 @@ off_t lseek(off_t offset,int ){
 }
 
 
-/*oid vdi_reader::read_header(){
+/* vdi_reader::read_header(){
 ifstream is(fin.c_str());
   if (is) {
     // get length of file:

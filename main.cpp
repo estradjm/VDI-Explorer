@@ -1,10 +1,3 @@
-/*
-Commands:
-ls -l - create a listings - not implemented
-exit - exit out of terminal - works
-cd - change directory - not implemented
-cp <source> <destination> - copy a file between VDI and host - not implemented
-*/
 
 #include <iostream>
 #include "vdi_reader.h"
@@ -15,17 +8,17 @@ int main(int argc, char *argv[])
 {
 string cmd, filename;
 bool flag;
-cout << "VDI Explorer: " << endl;
 
-// grab file passed into program or use default with IDE
-if (argc > 1)
-    filename = argv[argc];
-else
-    filename = "/home/jenniffer/Desktop/Operating Systems/Test-fixed-1k.vdi";
+// grab VDI file passed into program
+if (argc > 1){
+    //cout << argc <<" " << argv[0]<< " " << argv[1]<< " " << argv[2] << endl;
+    filename = argv[1];
+    cout << "Reading file: " << argv[1] << "\n"<< endl;
+    vdi_explorer::vdi_reader fs(filename);
+}
+//vdi_explorer::vdi_reader fs(filename);
 
-vdi_explorer::vdi_reader fs(filename);
-
-
+/*
 do{
 
 
@@ -38,7 +31,7 @@ cmd == "exit" ? flag = 0 : flag = 1;
 
 }
 while (flag);
-
+*/
 
 
     return 0;
