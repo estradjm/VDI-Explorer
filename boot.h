@@ -1,4 +1,4 @@
-#include "dataTypes.h"
+#include "datatypes.h"
 
 // the magic number found at the end of the master boot record
 const u16 BOOT_SECTOR_MAGIC = 0xaa55;
