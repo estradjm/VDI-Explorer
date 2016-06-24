@@ -18,7 +18,7 @@
 <p>The user uses the program essentially like a linux terminal with the following commands:</p>
 <ul>
   <li>ls -l ==> create a listing of files and directory in current working directory</li>
-  <li>cd <directory> ==> change directory</li>
-  <li>cp <source> <destination> ==> copy a file between VDI and host</li>
+  <li>cd {directory} ==> change directory</li>
+  <li>cp {source} {destination} ==> copy a file between VDI and host</li>
   <li>exit ==> exit out of VDI file traversal program</li>
 </ul>
