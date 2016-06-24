@@ -1,18 +1,24 @@
 # VDI_Explorer: 
-Traversal and manipulation of an EXT2 Filesystem contained in VirtualBox .VDI File, without mounting in a virtual machine.
+<p>Traversal and manipulation of an EXT2 Filesystem contained in VirtualBox .VDI File, without mounting in a virtual machine.</p>
 
-To compile the project, type in the following commands: 
-$ make vdi
+<p>To compile the project, type in the following commands: </p>
+<ul>
+  <li>$ make vdi</li>
+</ul>
 
-To run, depending on which file you want to give in as the VDI input file:
-$ ./vdi Test-dynamic-1k.vdi
-$ ./vdi Test-fixed-4k.vdi
-$ ./vdi Test-fixed-1k.vdi
+<p>To run, depending on which file you want to give in as the VDI input file:</p>
+<ul>
+  <li>$ ./vdi Test-dynamic-1k.vdi</li>
+  <li>$ ./vdi Test-fixed-4k.vdi</li>
+  <li>$ ./vdi Test-fixed-1k.vdi</li>
+</ul>
 
-Interface with the program is command line based and interactive, giving the user the ability to traverse a VirtualBox .VDI file, read files from inside the binary, and write files to the binary without corruption, without the need of mounting the .VDI file in a virtual machine. 
+<p>Interface with the program is command line based and interactive, giving the user the ability to traverse a VirtualBox .VDI file, read files from inside the binary, and write files to the binary without corruption, without the need of mounting the .VDI file in a virtual machine. </p>
 
-The user uses the program essentially like a linux terminal with the following commands:
-ls -l ==> create a listing of files and directory in current working directory
-cd <directory> ==> change directory
-cp <source> <destination> ==> copy a file between VDI and host
-exit ==> exit out of VDI file traversal program
+<p>The user uses the program essentially like a linux terminal with the following commands:</p>
+<ul>
+  <li>ls -l ==> create a listing of files and directory in current working directory</li>
+  <li>cd <directory> ==> change directory</li>
+  <li>cp <source> <destination> ==> copy a file between VDI and host</li>
+  <li>exit ==> exit out of VDI file traversal program</li>
+</ul>
