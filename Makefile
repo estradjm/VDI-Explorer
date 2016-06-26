@@ -1,3 +1,28 @@
-vdi: vdi_reader.h ext2_fs.h boot.h vdi_reader.cpp main.cpp
-	g++ -std=c++11 -g vdi_reader.cpp main.cpp -o vdi
+# Compiler
+CC=g++
 
+# Compiler flags
+CFLAGS=-c -Wall -g -std=c++11
+
+# Linker flags
+LDFLAGS=
+
+# Source files
+SOURCES=main.cpp vdi_reader.cpp ext2.cpp
+
+# Object files
+OBJECTS=$(SOURCES:.cpp=.o)
+
+# Executable
+EXECUTABLE=vdi
+
+all: $(SOURCES) $(EXECUTABLE)
+	
+$(EXECUTABLE): $(OBJECTS) 
+	$(CC) $(LDFLAGS) $(OBJECTS) -o $@
+
+.cpp.o:
+	$(CC) $(CFLAGS) $< -o $@
+
+clean:
+	rm $(OBJECTS) $(EXECUTABLE)

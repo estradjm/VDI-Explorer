@@ -2,62 +2,37 @@
 #define VDI_READER_H
 
 #include "datatypes.h" //typedefs for s8, u8, s16, u16, s32, u32, s64, and u64
-#include "boot.h"
 
 #include <string>
 #include <sys/types.h>
-
-#include <iostream>
-#include <sys/stat.h>
-#include <fcntl.h>
-#include <unistd.h>
-//#include <cunistd>
-#include <cstdio> // for perror()
-#include <cstdlib> // for atoi()
-
-
-// Prototypes for transferring to C-style, if we choose to do so.
-// VDIFile *vdiOpen(const char *fileName);
-// void vdiClose(VDIFile *f);
-// off_t vdiSeek(VDIFile *f, const off_t offset, const int anchor);
-// size_t vdiRead(VDIFile *f, void *buf, const size_t count);
-// size_t vdiWrite(VDIFile *f, const void *buf, const size_t count);
-
 
 namespace vdi_explorer{
     class vdi_reader
     {
         public:
+            // Constructor
             vdi_reader(std::string fs);
-            ~vdi_reader(void);
             
-            off_t vdiSeek (off_t offset , int anchor );
-            //Moves the file cursor to the specified place within the VDI file’s virtual disk.
-
-            size_t vdiRead(size_t *buf , size_t count); // Deprecated.
-            size_t vdiRead(void *buf, size_t count);
-            //Reads count bytes from the file, placing them in the specified buffer.
+            // Destructor
+            ~vdi_reader();
             
-            
-
-            size_t vdiWrite(const void *buf , size_t count);
-            //Writes count bytes to the file from the buffer.
-
-
-
-
+            // Opens a VDI file and performs initialization.
             void vdiOpen(const std::string fileName);
-            //Opens a VDI file and performs initialization.
-
-
-            void vdiClose(void);
-            //Closes a VDI file and performs necessary cleanup.
-
             
-
-//            uint8_t *read_bytes(size_t block_number, size_t block_size);
+            // Closes a VDI file and performs necessary cleanup.
+            void vdiClose();
+            
+            // Moves the file cursor to the specified place within the VDI file's virtual disk.
+            off_t vdiSeek (off_t offset, int anchor );
+            
+            // Reads count bytes from the file, placing them in the specified buffer.
+            size_t vdiRead(void *buf, size_t count);
+            
+            // Writes count bytes to the file from the buffer.
+            size_t vdiWrite(const void *buf, size_t count);
+            
         private:
-            struct VDIHeader {
+            struct __attribute__((packed)) VDIHeader {
                 char title[64];
                 u32 magic;
                 u16 majorVer, minorVer;
@@ -79,16 +54,6 @@ namespace vdi_explorer{
             //     u8 *pageBitmap;
             //     u8 *dirtyBitmap;
             // };
-
-            //VDIHeader hdr;
-            //off_t translate(off_t);
-            //int *pageMap;
-            u8 *MBR = nullptr;
-            BootSector bootSector;
-            int *superBlock = nullptr;
-            //int *bootSector = nullptr;
-            //int fd;
-            //off_t cursor;
             
             // Extracted from VDIFile struct.
             VDIHeader hdr;
@@ -97,16 +62,17 @@ namespace vdi_explorer{
             s32 *pageMap = nullptr;
             u8 *pageBitmap = nullptr;
             u8 *dirtyBitmap = nullptr;
+
+            // Performs the virtual-to-physical address translation.
+            off_t vdiTranslate();
             
-            off_t vdiTranslate(void);
-            void vdiAllocatePageFrame(void);
+            // Allocates a new page frame in the VDI file.
+            void vdiAllocatePageFrame();
             
             // @TODO Think about making a small function to do the calculation
             //       of cursor / hdr.pageSize utilizing bitshift, since it's a
             //       common function.
-            
-            
-
     };
-}
+} // namespace vdi_explorer
+
 #endif // VDI_READER_H

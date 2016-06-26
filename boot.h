@@ -1,19 +1,10 @@
+#ifndef BOOT_H
+#define BOOT_H
+
 #include "datatypes.h"
 
 // the magic number found at the end of the master boot record
 const u16 BOOT_SECTOR_MAGIC = 0xaa55;
-
-// an entry in the partition table. the unused entries really hold information,
-// but the information is antiquated and not useful for our purposes here
-struct PartitionEntry {
-  u8
-    unused0[4],
-    type,
-    unused1[3];
-  u32
-    firstSector,
-    nSectors;
-};
 
 // the master boot record.
 // the __attribute__((packed)) tells GCC to not add hidden padding between
@@ -23,11 +14,19 @@ struct PartitionEntry {
 //
 // note: you want entry 0 in partitionTable.
 struct __attribute__((packed)) BootSector {
-  u8
-    unused0[0x1be];
-  PartitionEntry
-    partitionTable[4];
-  u16
-    magic;
+    // an entry in the partition table. the unused entries really hold information,
+    // but the information is antiquated and not useful for our purposes here
+    struct PartitionEntry {
+        u8 unused0[4];
+        u8 type;
+        u8 unused1[3];
+        u32 firstSector;
+        u32 nSectors;
+    };
+
+    u8 unused0[0x1be];
+    PartitionEntry partitionTable[4];
+    u16 magic;
 };
 
+#endif
