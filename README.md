@@ -3,7 +3,12 @@
 
 <p>To compile the project, type in the following commands: </p>
 <ul>
-  <li>$ make vdi</li>
+  <li>$ make</li>
+</ul>
+
+<p>To remove all object files and executables:</p>
+<ul>
+  <li>$ make clean</li>
 </ul>
 
 <p>To run, depending on which file you want to give in as the VDI input file:</p>
