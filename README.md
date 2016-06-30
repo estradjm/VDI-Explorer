@@ -25,11 +25,10 @@
 
 ##Example:
 <p>To run, depending on which file you want to give in as the VDI input file:</p>
-<ul>
-  <li>`./vdi Test-dynamic-1k.vdi`li>
-  <li>`./vdi Test-fixed-4k.vdi`</li>
-  <li>`./vdi Test-fixed-1k.vdi`<li>
-</ul>
+  * `./vdi Test-dynamic-1k.vdi`</li>
+  * `./vdi Test-fixed-4k.vdi`</li>
+  * `./vdi Test-fixed-1k.vdi`</li>
+
 
 ##License: 
 Apache ver. 2.0, Copyright Jenniffer Estrada, 2016
