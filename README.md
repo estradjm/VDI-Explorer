@@ -26,9 +26,9 @@
 ##Example:
 <p>To run, depending on which file you want to give in as the VDI input file:</p>
 <ul>
-  <li>`./vdi Test-dynamic-1k.vdi`</li>
+  <li>`./vdi Test-dynamic-1k.vdi`li>
   <li>`./vdi Test-fixed-4k.vdi`</li>
-  <li>`./vdi Test-fixed-1k.vdi`</li>
+  <li>`./vdi Test-fixed-1k.vdi`<li>
 </ul>
 
 ##License: 
