@@ -18,12 +18,12 @@
   <li>$ ./vdi Test-fixed-1k.vdi</li>
 </ul>
 
-<p>Interface with the program is command line based and interactive, giving the user the ability to traverse a VirtualBox .VDI file, read files from inside the binary, and write files to the binary without corruption, without the need of mounting the .VDI file in a virtual machine. </p>
+<p>Interface with the program is command line based. The program gives the user the ability to traverse a VirtualBox .VDI file, read files from inside the binary, write files from the host computer to the .VDI filesystem and from the .VDI to the host (without corruption of the file or filesystem) without the need of mounting the .VDI file in a virtual machine. </p>
 
 <p>The user uses the program essentially like a linux terminal with the following commands:</p>
 <ul>
-  <li>ls -l ==> create a listing of files and directory in current working directory</li>
-  <li>cd {directory} ==> change directory</li>
-  <li>cp {source} {destination} ==> copy a file between VDI and host</li>
-  <li>exit ==> exit out of VDI file traversal program</li>
+  <li>ls -l                       Create a listing of files and directory in current working directory</li>
+  <li>cd {directory}              Change directory</li>
+  <li>cp {source} {destination}   Copy a file between VDI and host</li>
+  <li>exit                        Exit out of VDI file traversal program</li>
 </ul>
