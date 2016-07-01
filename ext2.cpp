@@ -10,7 +10,7 @@
 #include <cstring>
 
 /*
- * EXT2 should read the MBR, boot sector, super block, and navigate through a EXT2 filesystem.
+ * EXT2 should read the MBR, boot sector, super block, and navigate through an EXT2 filesystem.
  */
 
 using namespace std;
@@ -62,20 +62,17 @@ namespace vdi_explorer
         cout << "Free inodes count: " << superBlock.s_free_inodes_count << endl;
         cout << "First data block: " << superBlock.s_first_data_block << endl;
         cout << "Block size: " << (EXT2_BLOCK_BASE_SIZE << superBlock.s_log_block_size) << endl;
-        cout << "Fragment size: " << (EXT2_BLOCK_BASE_SIZE << superBlock.s_log_frag_size) << endl;
+        cout << "Fragment size: " << (EXT2_FRAG_BASE_SIZE << superBlock.s_log_frag_size) << endl;
         cout << "# blocks per group: " << superBlock.s_blocks_per_group << endl;
         cout << "# fragments per group: " << superBlock.s_frags_per_group << endl;
         cout << "# inodes per group: " << superBlock.s_inodes_per_group << endl;
         cout << "Magic signature: " << hex << superBlock.s_magic << dec << endl;
+        // End debug info.
         
+        // Calculate and verify the number of block groups in the partition.
         u32 nBlockGroupCalc1, nBlockGroupCalc2;
         nBlockGroupCalc1 = (float)superBlock.s_blocks_count / superBlock.s_blocks_per_group + 0.5;
         nBlockGroupCalc2 = (float)superBlock.s_inodes_count / superBlock.s_inodes_per_group + 0.5;
-        cout << "\n# of Block Groups:\n";
-        cout << "Calculation 1: " << nBlockGroupCalc1 << endl;
-        cout << "Calculation 2: " << nBlockGroupCalc2 << endl;
-        // End debug info.
-        
         numBlockGroups = nBlockGroupCalc1;
         if (nBlockGroupCalc1 != nBlockGroupCalc2)
         {
@@ -83,24 +80,59 @@ namespace vdi_explorer
             throw;
         }
         
-        //bgd = new ext2_block_group_desc[numBlockGroups];
+        // Debug info.
+        cout << "\n# of Block Groups:\n";
+        cout << "Calculation 1: " << nBlockGroupCalc1 << endl;
+        cout << "Calculation 2: " << nBlockGroupCalc2 << endl;
+        // End debug info.
         
+        // Allocate and verify an array of pointers to the (as yes unloaded) block group
+        // descriptors.
+        bgdTable = new ext2_block_group_desc[numBlockGroups];
+        if (bgdTable == nullptr)
+        {
+            cout << "Error allocating the array of block group descriptors.";
+            throw;
+        }
         
+        // Determine where the start of the block group descriptor table is.
+        off_t bgdTableStart = superBlock.s_log_block_size == 0 ?
+                              blockToOffset(2) :
+                              sizeof(bootSector) + 512 + sizeof(superBlock);
+        
+        // Read the block group descriptor table into memory.
+        vdi->vdiSeek(bgdTableStart, SEEK_SET);
+        vdi->vdiRead(bgdTable, sizeof(ext2_block_group_desc) * numBlockGroups);
+        // bgdTable doesn't need the "address of" operator (&) because it's already a pointer type.
     }
     
     ext2::~ext2()
     {
-    //delete[] bgd;
+        // Delete the block descriptor table.
+        if (bgdTable != nullptr)
+            delete[] bgdTable;
     }
     
     // Needed?
-    u16 ext2::offsetToBlockNum(off_t offset)
+    u32 ext2::offsetToBlock(off_t offset)
     {
         return offset / (EXT2_BLOCK_BASE_SIZE << superBlock.s_log_block_size);
     }
     
-    u32 ext2::inodeToBlockGroup(u32 inode)
+    u32 ext2::inodeToBlockGroup(u32 inode_number)
     {
-        return (inode - 1) / superBlock.s_inodes_per_group;
+        return (inode_number - 1) / superBlock.s_inodes_per_group;
+    }
+    
+    u32 ext2::inodeBlockGroupIndex(u32 inode_number)
+    {
+        return (inode_number - 1) % superBlock.s_inodes_per_group;
+    }
+    
+    off_t ext2::blockToOffset(u32 block_number)
+    {
+        return block_number < superBlock.s_blocks_count ?
+               block_number * (EXT2_BLOCK_BASE_SIZE << superBlock.s_log_block_size) :
+               -1;
     }
 } // namespace vdi_explorer

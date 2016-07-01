@@ -126,7 +126,7 @@ namespace vdi_explorer{
         }
         
         // Allocated the page bitmap and verify it allocated correctly.
-        u32 bitmapSize = (hdr.totalPages + 8191)/8192;
+        u32 bitmapSize = (hdr.totalPages + 8191) / 8192;
         pageBitmap = new u8(bitmapSize);
         if (pageBitmap == nullptr)
         {
@@ -408,8 +408,8 @@ namespace vdi_explorer{
         offset = cursor - pageNum * hdr.pageSize;
         
         // Load page map chunk if necessary.
-        u32 chunkNum = pageNum / 1024;
         // Check if the page map chunk is loaded.
+        u32 chunkNum = pageNum / 1024;
         if ((pageBitmap[chunkNum / 8] & (1 << (chunkNum % 8))) == 0)
         {
             // Calculate the chunk size and clamp it to 4096 if exceeded.
