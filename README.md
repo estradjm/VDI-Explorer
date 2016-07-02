@@ -13,10 +13,10 @@
 
 ##Installation:
 <p>To compile the project, type in the following commands: </p>
-  *`make`
+  * `make`
 
 <p>To remove all object files and executables:</p>
-  *`make clean`
+  * `make clean`
 
 ##Example:
 <p>To run, depending on which file you want to give in as the VDI input file:</p>
