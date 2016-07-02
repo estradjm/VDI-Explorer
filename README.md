@@ -2,7 +2,7 @@
 <p>Traversal and manipulation of an EXT2 Filesystem contained in VirtualBox .VDI File, without mounting in a virtual machine.</p>
 
 ##Description:
-<p>Program interface is command line based. The program gives the user the ability to traverse an EXT2 filesystem contained within a VirtualBox .VDI file. The program can display all files and content inside the .VDI file. The program can also write write files to and from the host machine to the the filesystem contained within the .VDI file, without corruption and without the need of mounting the .VDI file in a virtual machine. </p>
+<p>Program interface is command line based. The program gives the user the ability to traverse an EXT2 filesystem contained within a VirtualBox .VDI file. The program can display all files and content inside the .VDI file. The program can also write files into and out of the filesystem contained within the .VDI file to the host machine, without corruption and without the need of mounting the .VDI file in a virtual machine. </p>
 
 <p>The user uses the program essentially like a linux terminal with the following commands:</p>
 
