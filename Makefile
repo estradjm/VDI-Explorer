@@ -2,7 +2,7 @@
 CC=g++
 
 # Compiler flags
-CFLAGS=-c -Wall -g -std=c++11
+CFLAGS=-c -Wall -g -O0 -std=c++11
 
 # Linker flags
 LDFLAGS=
@@ -12,6 +12,9 @@ SOURCES=main.cpp vdi_reader.cpp ext2.cpp
 
 # Object files
 OBJECTS=$(SOURCES:.cpp=.o)
+
+# Miscellaneous debug files
+MISCDEBUG=*.cpp.*
 
 # Executable
 EXECUTABLE=vdi
@@ -26,3 +29,6 @@ $(EXECUTABLE): $(OBJECTS)
 
 clean:
 	rm $(OBJECTS) $(EXECUTABLE)
+
+clean_debug:
+	rm $(OBJECTS) $(EXECUTABLE) $(MISCDEBUG)
