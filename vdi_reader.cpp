@@ -18,6 +18,7 @@
 #include <cstring>
 
 #define DEBUG_VDI_WRITE_DISABLED
+#define DEBUG_VDI_OUTPUT_TRANSLATION
 
 /* VDI reader should read the VDI header and populate the VDI header structure,
    and read the VDI Map into pageMap*/
@@ -433,6 +434,10 @@ namespace vdi_explorer{
         
         // Do actual virtual to physical translation.
         offset += pageMap[pageNum] * hdr.pageSize + hdr.offsetData;
+        
+        #ifdef DEBUG_VDI_OUTPUT_TRANSLATION
+        cout << "VDI Translation Offset: " << offset << endl;
+        #endif
         
         return offset;
     }

@@ -188,6 +188,22 @@ namespace vdi_explorer
                 } osd2;				            /* OS dependent 2 */
             };
             
+            /*
+             * The new version of the directory entry.  Since EXT2 structures are
+             * stored in intel byte order, and the name_len field could never be
+             * bigger than 255 chars, it's safe to reclaim the extra byte for the
+             * file_type field.
+             */
+            struct __attribute__((packed)) ext2_dir_entry {
+            	u32  inode;                     /* Inode number */
+            	u16  rec_len;                   /* Directory entry length */
+            	u8   name_len;                  /* Name length */
+            	u8   file_type;
+            	u8   name[];                    /* File name, up to EXT2_NAME_LEN */
+            };
+            
+            
+            
             BootSector bootSector;
             ext2_superblock superBlock;
             vdi_reader *vdi = nullptr;
@@ -200,6 +216,13 @@ namespace vdi_explorer
             u32 inodeToBlockGroup(u32);
             u32 inodeBlockGroupIndex(u32);
             off_t blockToOffset(u32);
+            off_t inodeToOffset(u32);
+            void parse_directory_inode(ext2_inode);
+            
+            // Debug functions.
+            void print_inode(ext2_inode*);
+            void print_dir_entry(ext2_dir_entry*);
+            //void print_block_group(ext2_block_group_desc);
     };
 }
 
