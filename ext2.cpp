@@ -164,7 +164,7 @@ namespace vdi_explorer
         }
         // End debug info.
         
-        ext2_inode temp = readInode(30481);
+        ext2_inode temp = readInode(18);// 30481);
         
         // Debug info.
         print_inode(&temp);
@@ -176,7 +176,7 @@ namespace vdi_explorer
         
         auto temp2 = parse_directory_inode(temp);
         for (u32 i = 0; i < temp2.size(); i++)
-            print_dir_entry(temp2[i]);
+            print_dir_entry(temp2[i], true);
         
     }
     
@@ -369,20 +369,19 @@ namespace vdi_explorer
                 (dir_entry.file_type == EXT2_DIR_TYPE_FIFO ? "FIFO\n" : "") <<
                 (dir_entry.file_type == EXT2_DIR_TYPE_SOCKET ? "socket\n" : "") <<
                 (dir_entry.file_type == EXT2_DIR_TYPE_SYMLINK ? "symbolic link\n" : "");
-            cout << "Name: " << dir_entry.name << endl;
+            cout << "Name: ";
         }
-        else
-        {
-            cout << dir_entry.name << endl;
-        }
+        
+        cout << dir_entry.name << endl;
     }
     
     
     /*----------------------------------------------------------------------------------------------
      * Name:    parse_directory_inode
      * Type:    Function
-     * Purpose: ....
-     * Input:   ext2_inode inode, containing pointer to an inode object.
+     * Purpose: Read and parse a directory inode, returning the resulting list of directories and
+     *          files in a vector container.
+     * Input:   ext2_inode inode, containing an inode object.
      * Output:  vector<ext2_dir_entry>, contains a vector holding the contents of the inode.
      *
      * @TODO    Verify that it's ok to read just from i_block[0] for a directory inode.
@@ -390,39 +389,60 @@ namespace vdi_explorer
     // void ext2::parse_directory_inode(ext2_inode inode)
     std::vector<ext2::ext2_dir_entry> ext2::parse_directory_inode(ext2_inode inode)
     {
-        vector<ext2_dir_entry> toReturn;
+        vector<ext2_dir_entry> to_return;
         u32 cursor = 0;
-        s8 temp_name[256];
+        s8 name_buffer[256];
+        u8 num_bytes_to_read = 0;
+        
+        u8* inode_buffer = nullptr;
+        inode_buffer = new u8[inode.i_size];
+        if (inode_buffer == nullptr)
+        {
+            cout << "Error allocating directory inode buffer.";
+            throw;
+        }
         
         // Set the offset to the beginning of the block referenced by the inode.
         vdi->vdiSeek(blockToOffset(inode.i_block[0]), SEEK_SET);
+        
+        // Read the contents of the block into memory, based on the given size.
+        vdi->vdiRead(inode_buffer, inode.i_size);
 
         while (cursor < inode.i_size)
         {
             // Add a new ext2_dir_entry to the back of the vector.
-            toReturn.emplace_back();
+            to_return.emplace_back();
             
             // read inode, record length, name length, and file type.
-            vdi->vdiRead(&(toReturn.back()), 4 + 2 + 1 + 1);
+            // vdi->vdiRead(&(to_return.back()), 4 + 2 + 1 + 1);
+            num_bytes_to_read = 8;
+            memcpy(&(to_return.back()), &(inode_buffer[cursor]), num_bytes_to_read);
+            cursor += num_bytes_to_read;
             
             // read the name
-            vdi->vdiRead(temp_name, toReturn.back().name_len);
-            temp_name[toReturn.back().name_len] = '\0';
-            toReturn.back().name.assign(temp_name);
+            // vdi->vdiRead(name_buffer, to_return.back().name_len);
+            num_bytes_to_read = to_return.back().name_len;
+            memcpy(name_buffer, &(inode_buffer[cursor]), num_bytes_to_read);
+            cursor += num_bytes_to_read;
+            name_buffer[to_return.back().name_len] = '\0';
+            to_return.back().name.assign(name_buffer);
             
             // set the offset to the next record
-            if (EXT2_DIR_BASE_SIZE + toReturn.back().name_len < toReturn.back().rec_len)
-                vdi->vdiSeek(toReturn.back().rec_len - EXT2_DIR_BASE_SIZE - toReturn.back().name_len, SEEK_CUR);
+            if (EXT2_DIR_BASE_SIZE + to_return.back().name_len < to_return.back().rec_len)
+                // vdi->vdiSeek(to_return.back().rec_len - EXT2_DIR_BASE_SIZE - to_return.back().name_len, SEEK_CUR);
+                cursor += to_return.back().rec_len - EXT2_DIR_BASE_SIZE - to_return.back().name_len;
             
             // update the cursor
-            cursor += toReturn.back().rec_len;
+            // cursor += to_return.back().rec_len;
             
             // Debug info.
-            // if (toReturn.back().inode)
-            //     print_dir_entry(toReturn.back());
+            // if (to_return.back().inode)
+            //     print_dir_entry(to_return.back());
         }
         
-        return toReturn;
+        delete[] inode_buffer;
+        
+        return to_return;
     }
     
     /*----------------------------------------------------------------------------------------------
