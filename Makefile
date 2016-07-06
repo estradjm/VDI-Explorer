@@ -8,7 +8,7 @@ CFLAGS=-c -Wall -g -O0 -std=c++11
 LDFLAGS=
 
 # Source files
-SOURCES=main.cpp vdi_reader.cpp ext2.cpp
+SOURCES=main.cpp vdi_reader.cpp ext2.cpp interface.cpp utility.cpp
 
 # Object files
 OBJECTS=$(SOURCES:.cpp=.o)
