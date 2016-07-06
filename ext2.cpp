@@ -386,15 +386,14 @@ namespace vdi_explorer
      *
      * @TODO    Verify that it's ok to read just from i_block[0] for a directory inode.
     ----------------------------------------------------------------------------------------------*/
-    // void ext2::parse_directory_inode(ext2_inode inode)
     std::vector<ext2::ext2_dir_entry> ext2::parse_directory_inode(ext2_inode inode)
     {
         vector<ext2_dir_entry> to_return;
         u32 cursor = 0;
         s8 name_buffer[256];
-        u8 num_bytes_to_read = 0;
-        
         u8* inode_buffer = nullptr;
+        
+        // Attempt to allocate and then verify memory for the inode buffer.
         inode_buffer = new u8[inode.i_size];
         if (inode_buffer == nullptr)
         {
@@ -407,41 +406,36 @@ namespace vdi_explorer
         
         // Read the contents of the block into memory, based on the given size.
         vdi->vdiRead(inode_buffer, inode.i_size);
-
+        
+        // Iterate through the inode buffer, reading the directory entry records.
         while (cursor < inode.i_size)
         {
             // Add a new ext2_dir_entry to the back of the vector.
             to_return.emplace_back();
             
-            // read inode, record length, name length, and file type.
-            // vdi->vdiRead(&(to_return.back()), 4 + 2 + 1 + 1);
-            num_bytes_to_read = 8;
-            memcpy(&(to_return.back()), &(inode_buffer[cursor]), num_bytes_to_read);
-            cursor += num_bytes_to_read;
+            // Read inode, record length, name length, and file type.
+            memcpy(&(to_return.back()), &(inode_buffer[cursor]), EXT2_DIR_BASE_SIZE);
+            cursor += EXT2_DIR_BASE_SIZE;
             
-            // read the name
-            // vdi->vdiRead(name_buffer, to_return.back().name_len);
-            num_bytes_to_read = to_return.back().name_len;
-            memcpy(name_buffer, &(inode_buffer[cursor]), num_bytes_to_read);
-            cursor += num_bytes_to_read;
+            // Read the name into the buffer.
+            memcpy(name_buffer, &(inode_buffer[cursor]), to_return.back().name_len);
+            cursor += to_return.back().name_len;
+            
+            // Add a null to the end of the characters read in so it becomes a C-style string.
             name_buffer[to_return.back().name_len] = '\0';
+            
+            // Store the name in the record.
             to_return.back().name.assign(name_buffer);
             
-            // set the offset to the next record
+            // Set the offset to the next record.
             if (EXT2_DIR_BASE_SIZE + to_return.back().name_len < to_return.back().rec_len)
-                // vdi->vdiSeek(to_return.back().rec_len - EXT2_DIR_BASE_SIZE - to_return.back().name_len, SEEK_CUR);
                 cursor += to_return.back().rec_len - EXT2_DIR_BASE_SIZE - to_return.back().name_len;
-            
-            // update the cursor
-            // cursor += to_return.back().rec_len;
-            
-            // Debug info.
-            // if (to_return.back().inode)
-            //     print_dir_entry(to_return.back());
         }
         
+        // Free the inode buffer.
         delete[] inode_buffer;
         
+        // Return the vector.
         return to_return;
     }
     
