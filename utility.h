@@ -22,4 +22,7 @@ namespace utility
     
     // trim from both ends (copying)
     std::string trimmed(std::string);
+    
+    // tokenize a string based on a given delimiter
+    std::vector<std::string> tokenize(const std::string &, const std::string &);
 }

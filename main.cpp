@@ -2,6 +2,9 @@
 #include <iostream>
 #include "vdi_reader.h"
 #include "ext2.h"
+#include "utility.h"
+#include <vector>
+#include <string>
 
 using namespace std;
 
@@ -17,6 +20,13 @@ int main(int argc, char *argv[])
         cout << "Reading file: " << argv[1] << "\n"<< endl;
         vdi_explorer::vdi_reader fs(filename);
         vdi_explorer::ext2 e2(&fs);
+        
+        
+        string temp_string; temp_string.assign("      this ||is   a test  ||   ");
+        string temp_delim; temp_delim.assign(" ");
+        vector<string> temp_tokens = utility::tokenize(temp_string, temp_delim);
+        for (u32 i = 0; i < temp_tokens.size(); i++)
+            cout << "'" << temp_tokens[i] << "'" << endl;
     }
     //vdi_explorer::vdi_reader fs(filename);
     
