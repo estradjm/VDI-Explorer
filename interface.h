@@ -3,6 +3,8 @@
 #include <string>
 #include <vector>
 
+using namespace std;
+
 namespace vdi_explorer
 {
     class interface
@@ -14,13 +16,27 @@ namespace vdi_explorer
             void interactive();
             
         private:
-            bool command_cd(std::string);
-            bool command_cp(std::string);
-            bool command_ls(std::string);
+            enum command_code
+            {
+                code_unknown = -1,
+                code_cd,
+                code_cp,
+                code_exit,
+                code_help,
+                code_ls,
+                code_pwd
+            };
+            
+            bool command_cd(const std::string &);
+            bool command_cp(const std::string &, const std::string &);
             void command_exit();
+            bool command_help(const std::string &);
+            bool command_ls(const std::string &);
+            bool command_pwd();
             
-            std::vector<std::string> parse_args(std::string &);
+            command_code hash_command(const std::string &);
             
-            ext2* file_system = nullptr;
+            // pointer to the file system object
+            ext2 * file_system = nullptr;
     };
 } // namespace vdi_explorer

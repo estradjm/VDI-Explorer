@@ -9,38 +9,40 @@
 
 #include <iostream>
 
+using namespace std;
+
 namespace utility
 {
     // trim from start (in place)
-    void ltrim(std::string &s) {
-        s.erase(s.begin(), std::find_if(s.begin(), s.end(), std::not1(std::ptr_fun<int, int>(std::isspace))));
+    void ltrim(string &s) {
+        s.erase(s.begin(), find_if(s.begin(), s.end(), not1(ptr_fun<int, int>(isspace))));
     }
     
     // trim from end (in place)
-    void rtrim(std::string &s) {
-        s.erase(std::find_if(s.rbegin(), s.rend(), std::not1(std::ptr_fun<int, int>(std::isspace))).base(), s.end());
+    void rtrim(string &s) {
+        s.erase(find_if(s.rbegin(), s.rend(), not1(ptr_fun<int, int>(isspace))).base(), s.end());
     }
     
     // trim from both ends (in place)
-    void trim(std::string &s) {
+    void trim(string &s) {
         ltrim(s);
         rtrim(s);
     }
     
     // trim from start (copying)
-    std::string ltrimmed(std::string s) {
+    string ltrimmed(string s) {
         ltrim(s);
         return s;
     }
     
     // trim from end (copying)
-    std::string rtrimmed(std::string s) {
+    string rtrimmed(string s) {
         rtrim(s);
         return s;
     }
     
     // trim from both ends (copying)
-    std::string trimmed(std::string s) {
+    string trimmed(string s) {
         trim(s);
         return s;
     }
@@ -49,12 +51,12 @@ namespace utility
     // to_tokenize should be an already-trimmed string for best results
     // @TODO add quote handling capability
     // @TODO add escape character ('\') handling
-    std::vector<std::string> tokenize(const std::string &to_tokenize, const std::string &delimiter)
+    vector<string> tokenize(const string &to_tokenize, const string &delimiter)
     {
-        std::vector<std::string> to_return;
+        vector<string> to_return;
         unsigned int cursor = 0;
         size_t pos_found = 0;
-        std::string temp;
+        string temp;
         
         // loop through the string
         while (cursor < to_tokenize.length())
