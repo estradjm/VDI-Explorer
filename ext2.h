@@ -9,9 +9,23 @@
 // Commenting this out because it causes a *lot* of problems when attempting to compile.
 // #include "ext2_fs.h"
 
+#include <list>
 #include <string>
 #include <vector>
 #include <sys/types.h>
+
+using namespace std;
+
+struct fs_entry_posix
+{
+    string name;
+    string path;
+    u8 type;
+    u16 permissions;
+    u32 size;
+    s64 timestamp_created;
+    s64 timestamp_modified;
+};
 
 namespace vdi_explorer
 {
@@ -23,6 +37,10 @@ namespace vdi_explorer
             
             // Destructor
             ~ext2();
+            
+            vector<fs_entry_posix> list_directory_contents();
+            string get_pwd();
+            
             
         private:
             // Superblock.
@@ -191,22 +209,14 @@ namespace vdi_explorer
              * bigger than 255 chars, it's safe to reclaim the extra byte for the
              * file_type field.
              */
-            struct ext2_dir_entry {
+            struct ext2_dir_entry
+            {
             	u32  inode;                     /* Inode number */
             	u16  rec_len;                   /* Directory entry length */
             	u8   name_len;                  /* Name length */
             	u8   file_type;
-            	// u8   name[];                    /* File name, up to EXT2_NAME_LEN */
-            	// u8*  name = nullptr;
-            	std::string name;
-            	
-            // 	~ext2_dir_entry(){
-            // 	    if (name != nullptr)
-            //     	    delete[] name;
-            // 	}
+            	string name;                    /* File name, up to EXT2_NAME_LEN */
             };
-            
-            
             
             BootSector bootSector;
             ext2_superblock superBlock;
@@ -215,14 +225,17 @@ namespace vdi_explorer
             u32 numBlockGroups;
             
             ext2_block_group_desc *bgdTable = nullptr;
-
+            
+            // a list of directories in order to keep track of the hierarchy
+            list<ext2_dir_entry> pwd;
+            
             u32 offsetToBlock(off_t);
             u32 inodeToBlockGroup(u32);
             u32 inodeBlockGroupIndex(u32);
             off_t blockToOffset(u32);
             off_t inodeToOffset(u32);
             // void parse_directory_inode(ext2_inode);
-            std::vector<ext2_dir_entry> parse_directory_inode(ext2_inode);
+            vector<ext2_dir_entry> parse_directory_inode(ext2_inode);
             ext2_inode readInode(u32 inode);
             
             // Debug functions.

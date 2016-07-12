@@ -18,7 +18,8 @@ namespace vdi_explorer
         private:
             enum command_code
             {
-                code_unknown = -1,
+                code_none = -2,
+                code_unknown,
                 code_cd,
                 code_cp,
                 code_exit,
@@ -27,14 +28,14 @@ namespace vdi_explorer
                 code_pwd
             };
             
-            bool command_cd(const std::string &);
-            bool command_cp(const std::string &, const std::string &);
+            void command_cd(const string &);
+            void command_cp(const string &, const string &, const string &);
             void command_exit();
-            bool command_help(const std::string &);
-            bool command_ls(const std::string &);
-            bool command_pwd();
+            void command_help(const string &);
+            void command_ls(const string &);
+            void command_pwd();
             
-            command_code hash_command(const std::string &);
+            command_code hash_command(const string &);
             
             // pointer to the file system object
             ext2 * file_system = nullptr;

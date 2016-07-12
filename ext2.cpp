@@ -164,7 +164,7 @@ namespace vdi_explorer
         }
         // End debug info.
         
-        ext2_inode temp = readInode(18);// 30481);
+        ext2_inode temp = readInode(2);//18);// 30481);
         
         // Debug info.
         print_inode(&temp);
@@ -178,9 +178,12 @@ namespace vdi_explorer
         for (u32 i = 0; i < temp2.size(); i++)
             print_dir_entry(temp2[i], true);
         
+        // set the root folder as the initial pwd.
+        pwd.emplace_back(parse_directory_inode(readInode(2))[0]);
+        pwd.back().name.assign("");
     }
     
-     /*----------------------------------------------------------------------------------------------
+    /*----------------------------------------------------------------------------------------------
      * Name:    ~ext2
      * Type:    Function
      * Purpose: Destructor for the ext2 class.
@@ -193,6 +196,47 @@ namespace vdi_explorer
         if (bgdTable != nullptr)
             delete[] bgdTable;
     }
+    
+    /*----------------------------------------------------------------------------------------------
+     * Name:    list_directory_contents
+     * Type:    Function
+     * Purpose: Returns the contents of the current directory.
+     * Input:   Nothing.
+     * Output:  vector<fs_entry_posix>, containing a listing of all the files in the present working
+     *          directory.
+    ----------------------------------------------------------------------------------------------*/
+    vector<fs_entry_posix> ext2::list_directory_contents(void)
+    {
+        // stub
+        vector<fs_entry_posix> to_return;
+        return to_return;
+        
+        
+    }
+    
+    /*----------------------------------------------------------------------------------------------
+     * Name:    get_pwd
+     * Type:    Function
+     * Purpose: Returns the path to and the name of the present working directory.
+     * Input:   Nothing.
+     * Output:  string, containing the path to and name of the present working directory.
+    ----------------------------------------------------------------------------------------------*/
+    string ext2::get_pwd()
+    {
+        string to_return;
+        list<ext2_dir_entry>::iterator it = pwd.begin();
+        
+        // Iterate through the path until the end, adding the name of the directories to the string.
+        while (it != pwd.end())
+        {
+            to_return = "/" + it->name;
+            it++;
+        }
+        
+        // Return the full path.
+        return to_return;
+    }
+
     
     /*----------------------------------------------------------------------------------------------
      * Name:    offsetToBlock
@@ -339,23 +383,6 @@ namespace vdi_explorer
     {
         if (verbose)
         {
-            // cout << "\nDirectory Entry:\n";
-            // cout << "Inode number: " << dir_entry->inode << endl;
-            // cout << "Directory record length: " << dir_entry->rec_len << endl;
-            // cout << "Name length: " << (int)(dir_entry->name_len) << endl;
-            // cout << "Directory entry type: " <<
-            //     (dir_entry->file_type == EXT2_DIR_TYPE_UNKNOWN ? "unknown\n" : "") <<
-            //     (dir_entry->file_type == EXT2_DIR_TYPE_REGULAR ? "regular file\n" : "") <<
-            //     (dir_entry->file_type == EXT2_DIR_TYPE_DIRECTORY ? "directory\n" : "") <<
-            //     (dir_entry->file_type == EXT2_DIR_TYPE_CHARDEV ? "character device\n" : "") <<
-            //     (dir_entry->file_type == EXT2_DIR_TYPE_BLOCKDEV ? "block device\n" : "") <<
-            //     (dir_entry->file_type == EXT2_DIR_TYPE_FIFO ? "FIFO\n" : "") <<
-            //     (dir_entry->file_type == EXT2_DIR_TYPE_SOCKET ? "socket\n" : "") <<
-            //     (dir_entry->file_type == EXT2_DIR_TYPE_SYMLINK ? "symbolic link\n" : "");
-            // cout << "Name: ";
-            // for (u8 i = 0; i < (dir_entry->name_len); i++)
-            //     cout << dir_entry->name[i];
-            // cout << endl;
             cout << "\nDirectory Entry:\n";
             cout << "Inode number: " << dir_entry.inode << endl;
             cout << "Directory record length: " << dir_entry.rec_len << endl;
@@ -386,7 +413,7 @@ namespace vdi_explorer
      *
      * @TODO    Verify that it's ok to read just from i_block[0] for a directory inode.
     ----------------------------------------------------------------------------------------------*/
-    std::vector<ext2::ext2_dir_entry> ext2::parse_directory_inode(ext2_inode inode)
+    vector<ext2::ext2_dir_entry> ext2::parse_directory_inode(ext2_inode inode)
     {
         vector<ext2_dir_entry> to_return;
         u32 cursor = 0;

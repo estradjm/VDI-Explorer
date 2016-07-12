@@ -4,6 +4,10 @@
 #ifndef CONSTANTS_H
 #define CONSTANTS_H
 
+#include <string>
+
+using namespace std;
+
 const int BITS_IN_BYTE = 8;
 const int BITS_IN_1K = 1024;
 const int BITS_IN_4K = 4096;
@@ -70,5 +74,7 @@ const int EXT2_DIR_TYPE_BLOCKDEV = 4;
 const int EXT2_DIR_TYPE_FIFO = 5;
 const int EXT2_DIR_TYPE_SOCKET = 6;
 const int EXT2_DIR_TYPE_SYMLINK = 7;
+
+const string DELIMITER_SPACE = " ";
 
 #endif

@@ -3,26 +3,28 @@
 
 #include <string>
 
+using namespace std;
+
 namespace utility
 {
     // trim from start (in place)
-    void ltrim(std::string &);
+    void ltrim(string &);
     
     // trim from end (in place)
-    void rtrim(std::string &);
+    void rtrim(string &);
     
     // trim from both ends (in place)
-    void trim(std::string &);
+    void trim(string &);
     
     // trim from start (copying)
-    std::string ltrimmed(std::string);
+    string ltrimmed(string);
     
     // trim from end (copying)
-    std::string rtrimmed(std::string);
+    string rtrimmed(string);
     
     // trim from both ends (copying)
-    std::string trimmed(std::string);
+    string trimmed(string);
     
     // tokenize a string based on a given delimiter
-    std::vector<std::string> tokenize(const std::string &, const std::string &);
+    vector<string> tokenize(const string &, const string &);
 }
