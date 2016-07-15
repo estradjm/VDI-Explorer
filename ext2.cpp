@@ -204,14 +204,31 @@ namespace vdi_explorer
      * Input:   Nothing.
      * Output:  vector<fs_entry_posix>, containing a listing of all the files in the present working
      *          directory.
+     *
+     * @TODO    Optimize.
     ----------------------------------------------------------------------------------------------*/
     vector<fs_entry_posix> ext2::list_directory_contents(void)
     {
         // stub
         vector<fs_entry_posix> to_return;
+        ext2_inode temp_inode;
+        
+        vector<ext2_dir_entry> directory_contents = parse_directory_inode(pwd.back().inode);
+        
+        for (u32 i = 0; i < directory_contents.size(); i++)
+        {
+            temp_inode = readInode(directory_contents[i].inode);
+            
+            to_return.emplace_back();
+            to_return.back().name = directory_contents[i].name;
+            to_return.back().type = temp_inode.i_mode >> 12;  // verify that this should be 12 vs 11
+            to_return.back().permissions = temp_inode.i_mode & 0b1111111111111;
+            to_return.back().size = temp_inode.i_size;
+            to_return.back().timestamp_created = temp_inode.i_ctime;
+            to_return.back().timestamp_modified = temp_inode.i_mtime;
+        }
+        
         return to_return;
-        
-        
     }
     
     /*----------------------------------------------------------------------------------------------
@@ -229,7 +246,7 @@ namespace vdi_explorer
         // Iterate through the path until the end, adding the name of the directories to the string.
         while (it != pwd.end())
         {
-            to_return = "/" + it->name;
+            to_return += "/" + it->name;
             it++;
         }
         
@@ -464,6 +481,21 @@ namespace vdi_explorer
         
         // Return the vector.
         return to_return;
+    }
+    
+    /*----------------------------------------------------------------------------------------------
+     * Name:    parse_directory_inode
+     * Type:    Function
+     * Purpose: Read and parse a directory inode, returning the resulting list of directories and
+     *          files in a vector container.
+     * Input:   u32 inode, containing an inode number.
+     * Output:  vector<ext2_dir_entry>, contains a vector holding the contents of the inode.
+     *
+     * @TODO    Verify that it's ok to read just from i_block[0] for a directory inode.
+    ----------------------------------------------------------------------------------------------*/
+    vector<ext2::ext2_dir_entry> ext2::parse_directory_inode(u32 inode)
+    {
+        return parse_directory_inode(readInode(inode));
     }
     
     /*----------------------------------------------------------------------------------------------

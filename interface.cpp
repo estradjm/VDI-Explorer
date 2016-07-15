@@ -93,8 +93,7 @@ namespace vdi_explorer
                 case code_ls:
                     if (tokens.size() < 2)
                     {
-                        cout << "Not enough arguments.\n";
-                        command_help("ls");
+                        command_ls("");
                     }
                     else
                     {
@@ -134,11 +133,18 @@ namespace vdi_explorer
         return;
     }
     
+    // @TODO format output neatly into appropriately sized columns
+    // @TODO sort vector by name
+    // @TODO implement "-al" switch
+    // @TODO colorize?
+    // @TODO add '/' to directories when displayed
     void interface::command_ls(const string & switches)
     {
-        // stub
-        //vdi->print_dir_entry(ext2_dir_entry& dir_entry, 1);
-        cout << "Not implemented yet.\n";
+        vector<fs_entry_posix> file_listing = file_system->list_directory_contents();
+        for (u32 i = 0; i < file_listing.size(); i++)
+        {
+            cout << file_listing[i].name << "\t";
+        }
         return;
     }
     

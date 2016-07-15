@@ -19,7 +19,7 @@ using namespace std;
 struct fs_entry_posix
 {
     string name;
-    string path;
+    // string path;
     u8 type;
     u16 permissions;
     u32 size;
@@ -142,7 +142,7 @@ namespace vdi_explorer
             // Extracted from Linux/fs/ext2/ext2.h
             struct ext2_inode
             {
-                u16  i_mode;		            /* File mode */
+                u16  i_mode;		            /* File type and permissions */
                 u16  i_uid;		                /* Low 16 bits of Owner Uid */
                 u32  i_size;		            /* Size in bytes */
                 u32  i_atime;	                /* Access time */
@@ -236,6 +236,7 @@ namespace vdi_explorer
             off_t inodeToOffset(u32);
             // void parse_directory_inode(ext2_inode);
             vector<ext2_dir_entry> parse_directory_inode(ext2_inode);
+            vector<ext2_dir_entry> parse_directory_inode(u32);
             ext2_inode readInode(u32 inode);
             
             // Debug functions.
