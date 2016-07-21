@@ -8,6 +8,24 @@
 #include <iomanip>
 #include <string>
 #include <stdexcept>
+#include <stdio.h>
+
+#define RESET		0
+#define BRIGHT 		1
+#define DIM		    2
+#define UNDERLINE 	3
+#define BLINK		4
+#define REVERSE		7
+#define HIDDEN		8
+
+#define BLACK 		0
+#define RED		    1
+#define GREEN		2
+#define YELLOW		3
+#define BLUE		4
+#define MAGENTA		5
+#define CYAN		6
+#define	WHITE		7
 
 using namespace std;
 using namespace vdi_explorer;
@@ -120,7 +138,9 @@ namespace vdi_explorer
     void interface::command_cd(const string & directory)
     {
         // stub
-        cout << "Not implemented yet.\n";
+        file_system->set_pwd(directory);
+        // cout << "Not implemented yet.\n";
+        //vector<fs_entry_posix> file_listing = file_system->  ;
         return;
     }
     
@@ -133,10 +153,16 @@ namespace vdi_explorer
         return;
     }
     
-    // @TODO format output neatly into appropriately sized columns
+    // @TODO format output neatly into appropriately sized columns -> function in utility?
     // @TODO sort vector by name
-    // @TODO implement "-al" switch
-    // @TODO colorize?
+    // @TODO implement "a" and "l" switches
+    // @TODO colorize: 
+        // Blue: Directory
+        // Green: Executable or recognized data file
+        // Sky Blue: Linked file
+        // Yellow with black background: Device
+        // Pink: Graphic image file
+        // Red: Archive file
     // @TODO add '/' to directories when displayed
     void interface::command_ls(const string & switches)
     {

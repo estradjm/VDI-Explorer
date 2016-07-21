@@ -40,6 +40,8 @@ namespace vdi_explorer
             
             vector<fs_entry_posix> list_directory_contents();
             string get_pwd();
+            // bool change_pwd(string &);
+            void set_pwd(const string &); // return a bool to denote success/failure?
             
             
         private:
@@ -240,8 +242,11 @@ namespace vdi_explorer
             ext2_inode readInode(u32 inode);
             
             // Debug functions.
-            void print_inode(ext2_inode*);
-            void print_dir_entry(ext2_dir_entry&, bool = false);
+            void print_inode(ext2_inode *);
+            void print_dir_entry(ext2_dir_entry &, bool = false);
+            void print_superblock();
+            void print_bootsector();
+            void print_bgd_table();
             //void print_block_group(ext2_block_group_desc);
     };
 }

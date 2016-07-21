@@ -50,16 +50,7 @@ namespace vdi_explorer
         vdi->vdiRead(&bootSector, 512);
         
         // Debug info.
-        cout << "\nBootSector struct: ";
-        // cout << "\nBootstrap code: ";
-        // for (int i = 0; i < 0x1be; i++)
-        //     cout << hex << setfill('0') << setw(2) << (int)bootSector.unused0[i] << dec << " ";
-        for (int i = 0; i < 4 /*number of partition tables*/; i++) {
-            cout << "\nPartition Entry " << i+1 << ": ";
-            cout << "\n  First Sector: " << bootSector.partitionTable[i].firstSector;
-            cout << "\n  nSectors: " << bootSector.partitionTable[i].nSectors;
-        }
-        cout << "\nBoot Sector Signature: " << hex << bootSector.magic << dec << endl;
+        print_bootsector();
         // End debug info.
         
         // Read the superblock.
@@ -68,47 +59,7 @@ namespace vdi_explorer
         vdi->vdiRead(&superBlock, sizeof(ext2_superblock));
         
         // Debug info.
-        // cout << "\nSuper Block Raw:\n";
-        // for (u32 i = 0; i < sizeof(ext2_superblock); i++)
-        //     cout << hex << setfill('0') << setw(2) << (int)((u8 *)(&superBlock))[i] << " ";
-        // cout << dec << "\n\n";
-        cout << "\nSuperblock Dump:\n";
-        cout << "Inodes count: " << superBlock.s_inodes_count << endl;
-        cout << "Blocks count: " << superBlock.s_blocks_count << endl;
-        cout << "Reserved blocks count: " << superBlock.s_r_blocks_count << endl;
-        cout << "Free blocks count: " << superBlock.s_free_blocks_count << endl;
-        cout << "Free inodes count: " << superBlock.s_free_inodes_count << endl;
-        cout << "First data block: " << superBlock.s_first_data_block << endl;
-        cout << "Block size: " << (EXT2_BLOCK_BASE_SIZE << superBlock.s_log_block_size) << endl;
-        cout << "Fragment size: " << (EXT2_FRAG_BASE_SIZE << superBlock.s_log_frag_size) << endl;
-        cout << "# blocks per group: " << superBlock.s_blocks_per_group << endl;
-        cout << "# fragments per group: " << superBlock.s_frags_per_group << endl;
-        cout << "# inodes per group: " << superBlock.s_inodes_per_group << endl;
-        cout << "Mount time: " << superBlock.s_mtime << endl;
-        cout << "Write time: " << superBlock.s_wtime << endl;
-        cout << "Mount count: " << superBlock.s_mnt_count << endl;
-        cout << "Maximal mount count: " << superBlock.s_max_mnt_count << endl;
-        cout << "Magic signature: " << hex << superBlock.s_magic << dec << endl;
-        cout << "File system state: " << superBlock.s_state << endl;
-        cout << "Error behaviour: " << superBlock.s_errors << endl;
-        cout << "Minor revision level: " << superBlock.s_minor_rev_level << endl;
-        cout << "Time of last check: " << superBlock.s_lastcheck << endl;
-        cout << "Check interval: " << superBlock.s_checkinterval << endl;
-        cout << "Creator OS: " << superBlock.s_creator_os << endl;
-        cout << "Revision level: " << superBlock.s_rev_level << endl;
-        cout << "Default reserved UID: " << superBlock.s_def_resuid << endl;
-        cout << "Default reserved GID: " << superBlock.s_def_resgid << endl;
-        
-        cout << "\nFirst non-reserved inode: " << superBlock.s_first_ino << endl;
-        cout << "inode structure size: " << superBlock.s_inode_size << endl;
-        cout << "Block group number of superblock: " << superBlock.s_block_group_nr << endl;
-        cout << "Compatible feature set: " << superBlock.s_feature_compat << endl;
-        cout << "Incompatible feature set: " << superBlock.s_feature_incompat << endl;
-        cout << "Read-only compatible feature set: " << superBlock.s_feature_ro_compat << endl;
-        cout << "Volume UUID: " << superBlock.s_uuid << endl;
-        cout << "Volume Name: " << superBlock.s_volume_name << endl;
-        cout << "Directory where last mounted: " << superBlock.s_last_mounted << endl;
-        cout << "Compression algorithm usage bitmap: " << superBlock.s_algorithm_usage_bitmap << endl;
+        print_superblock();
         // End debug info.
         
         // Calculate and verify the number of block groups in the partition.
@@ -151,17 +102,7 @@ namespace vdi_explorer
         vdi->vdiRead(bgdTable, sizeof(ext2_block_group_desc) * numBlockGroups);
         
         // Debug info.
-        cout << "\nBGD Table:\n";
-        for (u32 i = 0; i < numBlockGroups; i++)
-        {
-            cout << "Block Group " << i << endl;
-            cout << "  Block address of block usage bitmap: " << bgdTable[i].bg_block_bitmap << endl;
-            cout << "  Block address of inode usage bitmap: " << bgdTable[i].bg_inode_bitmap << endl;
-            cout << "  Starting block address of inode table: " << bgdTable[i].bg_inode_table << endl;
-            cout << "  Number of unallocated blocks in group: " << bgdTable[i].bg_free_blocks_count << endl;
-            cout << "  Number of unallocated inodes in group: " << bgdTable[i].bg_free_inodes_count << endl;
-            cout << "  Number of directories in group: " << bgdTable[i].bg_used_dirs_count << endl;
-        }
+        print_bgd_table();
         // End debug info.
         
         ext2_inode temp = readInode(2);//18);// 30481);
@@ -179,6 +120,8 @@ namespace vdi_explorer
             print_dir_entry(temp2[i], true);
         
         // set the root folder as the initial pwd.
+        // pwd_inode.emplace_back(readInode(2));
+        // pwd.emplace_back(parse_directory_inode(pwd_inode.back())[0]);
         pwd.emplace_back(parse_directory_inode(readInode(2))[0]);
         pwd.back().name.assign("");
     }
@@ -214,7 +157,7 @@ namespace vdi_explorer
         ext2_inode temp_inode;
         
         vector<ext2_dir_entry> directory_contents = parse_directory_inode(pwd.back().inode);
-        
+
         for (u32 i = 0; i < directory_contents.size(); i++)
         {
             temp_inode = readInode(directory_contents[i].inode);
@@ -222,7 +165,7 @@ namespace vdi_explorer
             to_return.emplace_back();
             to_return.back().name = directory_contents[i].name;
             to_return.back().type = temp_inode.i_mode >> 12;  // verify that this should be 12 vs 11
-            to_return.back().permissions = temp_inode.i_mode & 0b1111111111111;
+            to_return.back().permissions = temp_inode.i_mode & 0x1fff; // 0b1111111111111;
             to_return.back().size = temp_inode.i_size;
             to_return.back().timestamp_created = temp_inode.i_ctime;
             to_return.back().timestamp_modified = temp_inode.i_mtime;
@@ -237,6 +180,8 @@ namespace vdi_explorer
      * Purpose: Returns the path to and the name of the present working directory.
      * Input:   Nothing.
      * Output:  string, containing the path to and name of the present working directory.
+     *
+     * @TODO    Fix the extra "/" being appended to the front when deeper than the root directory.
     ----------------------------------------------------------------------------------------------*/
     string ext2::get_pwd()
     {
@@ -252,6 +197,45 @@ namespace vdi_explorer
         
         // Return the full path.
         return to_return;
+    }
+
+    
+    /*----------------------------------------------------------------------------------------------
+     * Name:    set_pwd
+     * Type:    Function
+     * Purpose: Sets the path to and the name of the present working directory.
+     * Input:   string, containing the path to and name of the desired working directory.
+     * Output:  Nothing.
+     *
+     * @TODO    
+    ----------------------------------------------------------------------------------------------*/
+    void ext2::set_pwd(const string & desired_pwd)
+    {
+        // get pwd inode
+        // parse directory inode
+        // check returned results
+        // if the returned results have a match to desired_pwd, change to that directory
+        
+        u32 inode = pwd.back().inode;
+        vector<ext2_dir_entry> parsed_dir_inode = parse_directory_inode(inode);
+        for (u32 i = 0; i < parsed_dir_inode.size(); i++)
+        {
+            if (parsed_dir_inode[i].file_type == 2 && parsed_dir_inode[i].name == desired_pwd)
+                pwd.push_back(parsed_dir_inode[i]);
+        }
+        
+        // vector<string> tokens_desired = utility::tokenize(desired_pwd);
+        // string to_return;
+        // list<ext2_dir_entry>::iterator it = pwd.begin();
+        
+        // // Iterate through the path until the end, adding the name of the directories to the string.
+        // while (it != pwd.end())
+        // {
+        //     to_return += "/" + it->name;
+        //     it++;
+        // }
+        
+        return;
     }
 
     
@@ -329,7 +313,7 @@ namespace vdi_explorer
     }
     
     
-     /*----------------------------------------------------------------------------------------------
+    /*----------------------------------------------------------------------------------------------
      * Name:    print_inode
      * Type:    Function
      * Purpose: Prints inode information.
@@ -389,6 +373,7 @@ namespace vdi_explorer
         cout << "Fragment address: " << inode->i_faddr << endl;
     }
     
+    
     /*----------------------------------------------------------------------------------------------
      * Name:    print_dir_entry
      * Type:    Function
@@ -417,6 +402,97 @@ namespace vdi_explorer
         }
         
         cout << dir_entry.name << endl;
+    }
+    
+    
+    /*----------------------------------------------------------------------------------------------
+     * Name:    print_superblock
+     * Type:    Function
+     * Purpose: Prints superblock information.
+     * Input:   Nothing.
+     * Output:  Nothing.
+    ----------------------------------------------------------------------------------------------*/
+    void ext2::print_superblock()
+    {
+        cout << "\nSuperblock Dump:\n";
+        cout << "Inodes count: " << superBlock.s_inodes_count << endl;
+        cout << "Blocks count: " << superBlock.s_blocks_count << endl;
+        cout << "Reserved blocks count: " << superBlock.s_r_blocks_count << endl;
+        cout << "Free blocks count: " << superBlock.s_free_blocks_count << endl;
+        cout << "Free inodes count: " << superBlock.s_free_inodes_count << endl;
+        cout << "First data block: " << superBlock.s_first_data_block << endl;
+        cout << "Block size: " << (EXT2_BLOCK_BASE_SIZE << superBlock.s_log_block_size) << endl;
+        cout << "Fragment size: " << (EXT2_FRAG_BASE_SIZE << superBlock.s_log_frag_size) << endl;
+        cout << "# blocks per group: " << superBlock.s_blocks_per_group << endl;
+        cout << "# fragments per group: " << superBlock.s_frags_per_group << endl;
+        cout << "# inodes per group: " << superBlock.s_inodes_per_group << endl;
+        cout << "Mount time: " << superBlock.s_mtime << endl;
+        cout << "Write time: " << superBlock.s_wtime << endl;
+        cout << "Mount count: " << superBlock.s_mnt_count << endl;
+        cout << "Maximal mount count: " << superBlock.s_max_mnt_count << endl;
+        cout << "Magic signature: " << hex << superBlock.s_magic << dec << endl;
+        cout << "File system state: " << superBlock.s_state << endl;
+        cout << "Error behaviour: " << superBlock.s_errors << endl;
+        cout << "Minor revision level: " << superBlock.s_minor_rev_level << endl;
+        cout << "Time of last check: " << superBlock.s_lastcheck << endl;
+        cout << "Check interval: " << superBlock.s_checkinterval << endl;
+        cout << "Creator OS: " << superBlock.s_creator_os << endl;
+        cout << "Revision level: " << superBlock.s_rev_level << endl;
+        cout << "Default reserved UID: " << superBlock.s_def_resuid << endl;
+        cout << "Default reserved GID: " << superBlock.s_def_resgid << endl;
+        
+        cout << "\nFirst non-reserved inode: " << superBlock.s_first_ino << endl;
+        cout << "inode structure size: " << superBlock.s_inode_size << endl;
+        cout << "Block group number of superblock: " << superBlock.s_block_group_nr << endl;
+        cout << "Compatible feature set: " << superBlock.s_feature_compat << endl;
+        cout << "Incompatible feature set: " << superBlock.s_feature_incompat << endl;
+        cout << "Read-only compatible feature set: " << superBlock.s_feature_ro_compat << endl;
+        cout << "Volume UUID: " << superBlock.s_uuid << endl;
+        cout << "Volume Name: " << superBlock.s_volume_name << endl;
+        cout << "Directory where last mounted: " << superBlock.s_last_mounted << endl;
+        cout << "Compression algorithm usage bitmap: " << superBlock.s_algorithm_usage_bitmap << endl;
+    }
+    
+    
+    /*----------------------------------------------------------------------------------------------
+     * Name:    print_bootsector
+     * Type:    Function
+     * Purpose: Prints bootsector information.
+     * Input:   Nothing.
+     * Output:  Nothing.
+    ----------------------------------------------------------------------------------------------*/
+    void ext2::print_bootsector()
+    {
+        cout << "\nBootSector struct: ";
+        for (int i = 0; i < 4 /*number of partition tables*/; i++) {
+            cout << "\nPartition Entry " << i+1 << ": ";
+            cout << "\n  First Sector: " << bootSector.partitionTable[i].firstSector;
+            cout << "\n  nSectors: " << bootSector.partitionTable[i].nSectors;
+        }
+        cout << "\nBoot Sector Signature: " << hex << bootSector.magic << dec << endl;
+    }
+    
+    
+    /*----------------------------------------------------------------------------------------------
+     * Name:    print_bgd_table
+     * Type:    Function
+     * Purpose: Prints the BGD table information.
+     * Input:   Nothing.
+     * Output:  Nothing.
+    ----------------------------------------------------------------------------------------------*/
+    void ext2::print_bgd_table()
+    {
+        cout << "\nBGD Table:\n";
+        for (u32 i = 0; i < numBlockGroups; i++)
+        {
+            cout << "Block Group " << i << endl;
+            cout << "  Block address of block usage bitmap: " << bgdTable[i].bg_block_bitmap << endl;
+            cout << "  Block address of inode usage bitmap: " << bgdTable[i].bg_inode_bitmap << endl;
+            cout << "  Starting block address of inode table: " << bgdTable[i].bg_inode_table << endl;
+            cout << "  Number of unallocated blocks in group: " << bgdTable[i].bg_free_blocks_count << endl;
+            cout << "  Number of unallocated inodes in group: " << bgdTable[i].bg_free_inodes_count << endl;
+            cout << "  Number of directories in group: " << bgdTable[i].bg_used_dirs_count << endl;
+        }
     }
     
     
