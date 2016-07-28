@@ -43,25 +43,29 @@ namespace vdi_explorer
         }
     }
     
+    
     interface::~interface()
     {
         return;
     }
     
+    
     void interface::interactive()
     {
         string command_string;
         vector<string> tokens;
+        vector<string> tokens2;
 
         while (true)
         {
             cout << "\nCommand: ";
             getline(cin, command_string);
             tokens = utility::tokenize(command_string, DELIMITER_SPACE);
+            tokens2 = utility::tokenize(command_string, DELIMITER_FSLASH);
             
             // Debug info.
             for (unsigned int i = 0; i < tokens.size(); i++)
-                cout << tokens[i] << endl;
+                cout << "debug (ext2::interface::interactive): " << tokens[i] << endl;
             // End debug info.
             
             if (tokens.size() == 0)
@@ -135,14 +139,14 @@ namespace vdi_explorer
         }
     }
     
+    
     void interface::command_cd(const string & directory)
     {
-        // stub
-        file_system->set_pwd(directory);
         // cout << "Not implemented yet.\n";
-        //vector<fs_entry_posix> file_listing = file_system->  ;
+        file_system->set_pwd(directory);
         return;
     }
+    
     
     void interface::command_cp(const string & direction,
                                const string & copy_from,
@@ -152,6 +156,7 @@ namespace vdi_explorer
         cout << "Not implemented yet.\n";
         return;
     }
+    
     
     // @TODO format output neatly into appropriately sized columns -> function in utility?
     // @TODO sort vector by name
@@ -166,7 +171,7 @@ namespace vdi_explorer
     // @TODO add '/' to directories when displayed
     void interface::command_ls(const string & switches)
     {
-        vector<fs_entry_posix> file_listing = file_system->list_directory_contents();
+        vector<fs_entry_posix> file_listing = file_system->get_directory_contents();
         for (u32 i = 0; i < file_listing.size(); i++)
         {
             cout << file_listing[i].name << "\t";
@@ -174,11 +179,13 @@ namespace vdi_explorer
         return;
     }
     
+    
     void interface::command_exit()
     {
         // exit the program
         exit(0);
     }
+    
     
     void interface::command_help(const string & command)
     {
@@ -252,11 +259,13 @@ namespace vdi_explorer
         }
     }
     
+    
     void interface::command_pwd()
     {
         cout << file_system->get_pwd() << endl;
         return;
     }
+    
     
     interface::command_code interface::hash_command(const string & command)
     {

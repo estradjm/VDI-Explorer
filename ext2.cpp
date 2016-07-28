@@ -18,6 +18,7 @@
 #include <sys/types.h>
 #include <unistd.h>
 #include <cstring>
+#include "utility.h"
 
 /*
  * EXT2 should read the MBR, boot sector, super block, and navigate through an EXT2 filesystem.
@@ -123,7 +124,7 @@ namespace vdi_explorer
         // pwd_inode.emplace_back(readInode(2));
         // pwd.emplace_back(parse_directory_inode(pwd_inode.back())[0]);
         pwd.emplace_back(parse_directory_inode(readInode(2))[0]);
-        pwd.back().name.assign("");
+        pwd.back().name.assign("/");
     }
     
     /*----------------------------------------------------------------------------------------------
@@ -149,8 +150,9 @@ namespace vdi_explorer
      *          directory.
      *
      * @TODO    Optimize.
+     * @TODO    Investigate segfault in "/lost+found". *** HIGH ***
     ----------------------------------------------------------------------------------------------*/
-    vector<fs_entry_posix> ext2::list_directory_contents(void)
+    vector<fs_entry_posix> ext2::get_directory_contents(void)
     {
         // stub
         vector<fs_entry_posix> to_return;
@@ -180,19 +182,24 @@ namespace vdi_explorer
      * Purpose: Returns the path to and the name of the present working directory.
      * Input:   Nothing.
      * Output:  string, containing the path to and name of the present working directory.
-     *
-     * @TODO    Fix the extra "/" being appended to the front when deeper than the root directory.
     ----------------------------------------------------------------------------------------------*/
     string ext2::get_pwd()
     {
         string to_return;
-        list<ext2_dir_entry>::iterator it = pwd.begin();
         
-        // Iterate through the path until the end, adding the name of the directories to the string.
-        while (it != pwd.end())
+        // Check if the pwd is the root directory.
+        if (pwd.size() == 1)
         {
-            to_return += "/" + it->name;
-            it++;
+            to_return = "/";
+        }
+        else
+        {
+            // Otherwise, iterate through the path until the end, adding the name of the directories
+            // to the string.
+            for (u32 i = 1; i < pwd.size(); i++)
+            {
+                to_return += "/" + pwd[i].name;
+            }
         }
         
         // Return the full path.
@@ -207,7 +214,9 @@ namespace vdi_explorer
      * Input:   string, containing the path to and name of the desired working directory.
      * Output:  Nothing.
      *
-     * @TODO    
+     * @TODO    Add proper handling for full paths and relative paths beyond one level away.
+     * @TODO    Add proper handling of '.' and '..' directories.
+     * #TODO    Investigate segfault after some number of '..' directory changes. *** HIGH ***
     ----------------------------------------------------------------------------------------------*/
     void ext2::set_pwd(const string & desired_pwd)
     {
@@ -598,4 +607,30 @@ namespace vdi_explorer
         
         return toReturn;
     }
+    
+
+    /*----------------------------------------------------------------------------------------------
+     * Name:    dir_entry_exists
+     * Type:    Function
+     * Purpose: Small function that verifies a path exists.
+     * Input:   const string & path_to_check, containing the path to verify.
+     * Output:  bool, detailing whether the path exists (true) or not (false).
+    ----------------------------------------------------------------------------------------------*/
+    bool ext2::dir_entry_exists(const string & path_to_check){
+        vector<string> path_tokens = utility::tokenize(path_to_check, DELIMITER_FSLASH);
+        
+        vector<ext2_dir_entry> temp_pwd;
+        
+        if(path_to_check[0] == '/'){
+            // something?
+            temp_pwd.push_back(pwd.front());
+        }
+        else{
+            temp_pwd = pwd;
+        }
+        
+        
+        return false; //temp
+    } 
+    
 } // namespace vdi_explorer

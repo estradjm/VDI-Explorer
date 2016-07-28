@@ -76,6 +76,6 @@ const int EXT2_DIR_TYPE_SOCKET = 6;
 const int EXT2_DIR_TYPE_SYMLINK = 7;
 
 const string DELIMITER_SPACE = " ";
-//const string DELIMITER_FSLASH = "/";
+const string DELIMITER_FSLASH = "/";
 
 #endif

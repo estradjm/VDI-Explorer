@@ -38,7 +38,7 @@ namespace vdi_explorer
             // Destructor
             ~ext2();
             
-            vector<fs_entry_posix> list_directory_contents();
+            vector<fs_entry_posix> get_directory_contents();
             string get_pwd();
             // bool change_pwd(string &);
             void set_pwd(const string &); // return a bool to denote success/failure?
@@ -229,17 +229,19 @@ namespace vdi_explorer
             ext2_block_group_desc *bgdTable = nullptr;
             
             // a list of directories in order to keep track of the hierarchy
-            list<ext2_dir_entry> pwd;
+            // list<ext2_dir_entry> pwd;
+            vector<ext2_dir_entry> pwd;
             
             u32 offsetToBlock(off_t);
             u32 inodeToBlockGroup(u32);
             u32 inodeBlockGroupIndex(u32);
             off_t blockToOffset(u32);
             off_t inodeToOffset(u32);
-            // void parse_directory_inode(ext2_inode);
             vector<ext2_dir_entry> parse_directory_inode(ext2_inode);
             vector<ext2_dir_entry> parse_directory_inode(u32);
             ext2_inode readInode(u32 inode);
+            bool dir_entry_exists(const string &);
+            // vector<ext2_dir_entry> dir_entry_exists(const string &);  
             
             // Debug functions.
             void print_inode(ext2_inode *);
@@ -247,7 +249,6 @@ namespace vdi_explorer
             void print_superblock();
             void print_bootsector();
             void print_bgd_table();
-            //void print_block_group(ext2_block_group_desc);
     };
 }
 

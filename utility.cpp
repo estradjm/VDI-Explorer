@@ -51,7 +51,7 @@ namespace utility
     // to_tokenize should be an already-trimmed string for best results
     // @TODO add quote handling capability
     // @TODO add escape character ('\') handling
-    vector<string> tokenize(const string &to_tokenize, const string &delimiter)
+    vector<string> tokenize(const string & to_tokenize, const string & delimiter)
     {
         vector<string> to_return;
         unsigned int cursor = 0;
