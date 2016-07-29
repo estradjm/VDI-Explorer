@@ -43,6 +43,10 @@ namespace vdi_explorer
             // bool change_pwd(string &);
             void set_pwd(const string &); // return a bool to denote success/failure?
             
+            // Public debug functions.
+            void debug_dump_pwd_inode();
+            void debug_dump_block(u32);
+            // End public debug functions.
             
         private:
             // Superblock.
@@ -240,8 +244,8 @@ namespace vdi_explorer
             vector<ext2_dir_entry> parse_directory_inode(ext2_inode);
             vector<ext2_dir_entry> parse_directory_inode(u32);
             ext2_inode readInode(u32 inode);
-            bool dir_entry_exists(const string &);
-            // vector<ext2_dir_entry> dir_entry_exists(const string &);  
+            // bool dir_entry_exists(const string &);
+            vector<ext2_dir_entry> dir_entry_exists(const string &);  
             
             // Debug functions.
             void print_inode(ext2_inode *);
@@ -249,6 +253,7 @@ namespace vdi_explorer
             void print_superblock();
             void print_bootsector();
             void print_bgd_table();
+            void print_block(u32, bool);
     };
 }
 

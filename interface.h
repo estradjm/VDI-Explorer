@@ -26,6 +26,9 @@ namespace vdi_explorer
                 code_help,
                 code_ls,
                 code_pwd
+                // Debug
+                , code_dump_pwd_inode
+                , code_dump_block
             };
             
             void command_cd(const string &);
@@ -34,6 +37,10 @@ namespace vdi_explorer
             void command_help(const string &);
             void command_ls(const string &);
             void command_pwd();
+            // Debug.
+            void command_dump_pwd_inode();
+            void command_dump_block(u32);
+            // End debug.
             
             command_code hash_command(const string &);
             

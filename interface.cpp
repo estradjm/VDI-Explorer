@@ -127,6 +127,16 @@ namespace vdi_explorer
                     command_pwd();
                     break;
                 
+                // Debug
+                case code_dump_pwd_inode:
+                    command_dump_pwd_inode();
+                    break;
+                
+                case code_dump_block:
+                    command_dump_block(stoi(tokens[1]));
+                    break;
+                // End debug.
+                
                 case code_unknown:
                     cout << "Unknown command.\n";
                     break;
@@ -267,6 +277,18 @@ namespace vdi_explorer
     }
     
     
+    // Debug.
+    void interface::command_dump_pwd_inode()
+    {
+        file_system->debug_dump_pwd_inode();
+    }
+    void interface::command_dump_block(u32 block_to_dump)
+    {
+        file_system->debug_dump_block(block_to_dump);
+    }
+    // End debug.
+    
+    
     interface::command_code interface::hash_command(const string & command)
     {
         if (command == "cd")
@@ -297,6 +319,16 @@ namespace vdi_explorer
         {
             return code_none;
         }
+        // Debug.
+        else if (command == "dump_pwd_inode")
+        {
+            return code_dump_pwd_inode;
+        }
+        else if (command == "dump_block")
+        {
+            return code_dump_block;
+        }
+        // End debug.
         else
         {
             return code_unknown;
