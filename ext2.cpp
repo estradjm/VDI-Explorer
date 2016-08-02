@@ -518,7 +518,7 @@ namespace vdi_explorer
      * Input:   ext2_inode inode, containing an inode object.
      * Output:  vector<ext2_dir_entry>, contains a vector holding the contents of the inode.
      *
-     * @TODO    Verify that it's ok to read just from i_block[0] for a directory inode.
+     * @TODO    Verify that it's ok to read just from i_block[0] for a directory inode. <- it's not
     ----------------------------------------------------------------------------------------------*/
     vector<ext2::ext2_dir_entry> ext2::parse_directory_inode(ext2_inode inode)
     {
@@ -564,6 +564,9 @@ namespace vdi_explorer
             // Set the offset to the next record.
             if (EXT2_DIR_BASE_SIZE + to_return.back().name_len < to_return.back().rec_len)
                 cursor += to_return.back().rec_len - EXT2_DIR_BASE_SIZE - to_return.back().name_len;
+            
+            cout << "\ndebug::ext2::ext2_dir_entry\n";
+            print_dir_entry(to_return.back());
         }
         
         // Free the inode buffer.
