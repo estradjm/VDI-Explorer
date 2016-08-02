@@ -20,7 +20,7 @@ struct fs_entry_posix
 {
     string name;
     // string path;
-    u8 type;
+    u8 type; // currently matches the ext2 inode entry type mapping
     u16 permissions;
     u32 size;
     s64 timestamp_created;
@@ -46,6 +46,7 @@ namespace vdi_explorer
             // Public debug functions.
             void debug_dump_pwd_inode();
             void debug_dump_block(u32);
+            void debug_dump_inode(u32);
             // End public debug functions.
             
         private:

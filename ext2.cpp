@@ -166,8 +166,9 @@ namespace vdi_explorer
             
             to_return.emplace_back();
             to_return.back().name = directory_contents[i].name;
-            to_return.back().type = temp_inode.i_mode >> 12;  // verify that this should be 12 vs 11
-            to_return.back().permissions = temp_inode.i_mode & 0x1fff; // 0b1111111111111;
+            // to_return.back().type = (temp_inode.i_mode & 0xf000) >> 12 ; // mask for the top 4 bits
+            to_return.back().type = directory_contents[i].file_type;
+            to_return.back().permissions = temp_inode.i_mode & 0x0fff; // mask for the bottom 12 bits
             to_return.back().size = temp_inode.i_size;
             to_return.back().timestamp_created = temp_inode.i_ctime;
             to_return.back().timestamp_modified = temp_inode.i_mtime;
@@ -343,7 +344,7 @@ namespace vdi_explorer
             (((inode->i_mode >> 12) << 12) == EXT2_INODE_TYPE_BLOCKDEV ? "Block device \n" : "") <<
             (((inode->i_mode >> 12) << 12) == EXT2_INODE_TYPE_FILE ? "Regular file\n" : "") <<
             (((inode->i_mode >> 12) << 12) == EXT2_INODE_TYPE_SYMLINK ? "Symbolic link\n" : "") <<
-            (((inode->i_mode >> 12) << 12) == EXT2_INODE_TYPE_UNIXSOCK ? "Unix socket\n" : "");
+            (((inode->i_mode >> 12) << 12) == EXT2_INODE_TYPE_SOCKET ? "Unix socket\n" : "");
         cout << "Permissions:\n" << 
             (inode->i_mode & EXT2_INODE_PERM_OTHER_EXECUTE ? "  other execute\n" : "") <<
             (inode->i_mode & EXT2_INODE_PERM_OTHER_WRITE ? "  other write\n" : "") <<
@@ -404,8 +405,8 @@ namespace vdi_explorer
             cout << "Name length: " << (int)(dir_entry.name_len) << endl;
             cout << "Directory entry type: " <<
                 (dir_entry.file_type == EXT2_DIR_TYPE_UNKNOWN ? "unknown\n" : "") <<
-                (dir_entry.file_type == EXT2_DIR_TYPE_REGULAR ? "regular file\n" : "") <<
-                (dir_entry.file_type == EXT2_DIR_TYPE_DIRECTORY ? "directory\n" : "") <<
+                (dir_entry.file_type == EXT2_DIR_TYPE_FILE ? "regular file\n" : "") <<
+                (dir_entry.file_type == EXT2_DIR_TYPE_DIR ? "directory\n" : "") <<
                 (dir_entry.file_type == EXT2_DIR_TYPE_CHARDEV ? "character device\n" : "") <<
                 (dir_entry.file_type == EXT2_DIR_TYPE_BLOCKDEV ? "block device\n" : "") <<
                 (dir_entry.file_type == EXT2_DIR_TYPE_FIFO ? "FIFO\n" : "") <<
@@ -726,5 +727,11 @@ namespace vdi_explorer
     void ext2::debug_dump_block(u32 block_to_dump)
     {
         print_block(block_to_dump);
+    }
+    
+    void ext2::debug_dump_inode(u32 inode_to_dump)
+    {
+        ext2_inode inode = readInode(inode_to_dump);
+        print_inode(&inode);
     }
 } // namespace vdi_explorer

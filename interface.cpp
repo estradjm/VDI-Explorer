@@ -135,6 +135,10 @@ namespace vdi_explorer
                 case code_dump_block:
                     command_dump_block(stoi(tokens[1]));
                     break;
+                
+                case code_dump_inode:
+                    command_dump_inode(stoi(tokens[1]));
+                    break;
                 // End debug.
                 
                 case code_unknown:
@@ -182,9 +186,35 @@ namespace vdi_explorer
     void interface::command_ls(const string & switches)
     {
         vector<fs_entry_posix> file_listing = file_system->get_directory_contents();
+        vector<string> filename_tokens;
         for (u32 i = 0; i < file_listing.size(); i++)
         {
-            cout << file_listing[i].name << "\t";
+            filename_tokens = utility::tokenize(file_listing[i].name, DELIMITER_DOT);
+            string file_extension = (filename_tokens.size() == true ? filename_tokens.back() : "");
+            if (file_listing[i].type == EXT2_DIR_TYPE_DIR)
+                cout << "\033[1;34m" << file_listing[i].name << "\033[0m"; //blue (bold) - directory or recognized data file
+            else if (file_listing[i].type == EXT2_INODE_TYPE_FILE &&
+                    (file_listing[i].permissions & EXT2_INODE_PERM_USER_EXECUTE ||
+                     file_listing[i].permissions & EXT2_INODE_PERM_GROUP_EXECUTE ||
+                     file_listing[i].permissions & EXT2_INODE_PERM_OTHER_EXECUTE))
+                cout << "\033[2;31m" << file_listing[i].name << "\033[0m"; //green - executable files
+            else if (file_listing[i].type == EXT2_INODE_TYPE_SYMLINK)
+                cout << "\033[6;31m" << file_listing[i].name << "\033[0m"; //cyan - linked file
+            else if (file_listing[i].type == EXT2_INODE_TYPE_SYMLINK)
+                cout << "\033[3;31m" << file_listing[i].name << "\033[0m"; //yellow (with black background) - device
+            else if (file_listing[i].type == EXT2_INODE_TYPE_SYMLINK)
+                cout << "\033[5;31m" << file_listing[i].name << "\033[0m"; //pink - graphic image file
+            else if (file_listing[i].type == EXT2_INODE_TYPE_FILE &&
+                    (file_extension == "zip" ||
+                     file_extension == "tar" ||
+                     file_extension == "rar" ||
+                     file_extension == "7z" ||
+                     file_extension == "xz"))
+                cout << "\033[0;31m" << file_listing[i].name << "\033[0m"; //red - archive file
+            else 
+                cout << file_listing[i].name;
+            
+            cout << "\t";
         }
         return;
     }
@@ -286,6 +316,10 @@ namespace vdi_explorer
     {
         file_system->debug_dump_block(block_to_dump);
     }
+    void interface::command_dump_inode(u32 inode_to_dump)
+    {
+        file_system->debug_dump_inode(inode_to_dump);
+    }
     // End debug.
     
     
@@ -327,6 +361,10 @@ namespace vdi_explorer
         else if (command == "dump_block")
         {
             return code_dump_block;
+        }
+        else if (command == "dump_inode")
+        {
+            return code_dump_inode;
         }
         // End debug.
         else

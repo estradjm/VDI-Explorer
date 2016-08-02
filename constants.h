@@ -22,8 +22,8 @@ const int VDI_SECTOR_SIZE = 512; // The size in bytes of a sector in a VDI. (con
 
 const int EXT2_SUPERBLOCK_OFFSET = 1024; // The superblock is located 1024 bytes from the beginning of the volume.
 const int EXT2_SUPERBLOCK_SIZE = 1024; // The superblock is 1024 bytes long.
-const int EXT2_BLOCK_BASE_SIZE = 1024; // The base block size is 1024 bytes.
-const int EXT2_FRAG_BASE_SIZE = 1024; // The base fragment size is 1024 bytes.
+const unsigned int EXT2_BLOCK_BASE_SIZE = 1024; // The base block size is 1024 bytes.
+const unsigned int EXT2_FRAG_BASE_SIZE = 1024; // The base fragment size is 1024 bytes.
 
 const int EXT2_INODE_NBLOCKS_DIR = 12; // The number of direct block pointers in an inode.
 const int EXT2_INODE_BLOCK_S_IND = EXT2_INODE_NBLOCKS_DIR; // Array location of the singly indirect block pointer in an inode.
@@ -37,7 +37,7 @@ const int EXT2_INODE_TYPE_DIR = 0x4000;
 const int EXT2_INODE_TYPE_BLOCKDEV = 0x6000;
 const int EXT2_INODE_TYPE_FILE = 0x8000;
 const int EXT2_INODE_TYPE_SYMLINK = 0xA000;
-const int EXT2_INODE_TYPE_UNIXSOCK = 0xC000;
+const int EXT2_INODE_TYPE_SOCKET = 0xC000;
 
 const int EXT2_INODE_PERM_OTHER_EXECUTE = 0x001;
 const int EXT2_INODE_PERM_OTHER_WRITE = 0x002;
@@ -67,8 +67,8 @@ const int EXT2_INODE_FLAGS_JOURNAL_FILE_DATA = 0x0004000;
 const int EXT2_DIR_BASE_SIZE = 8;
 
 const int EXT2_DIR_TYPE_UNKNOWN = 0;
-const int EXT2_DIR_TYPE_REGULAR = 1;
-const int EXT2_DIR_TYPE_DIRECTORY = 2;
+const int EXT2_DIR_TYPE_FILE = 1;
+const int EXT2_DIR_TYPE_DIR = 2;
 const int EXT2_DIR_TYPE_CHARDEV = 3;
 const int EXT2_DIR_TYPE_BLOCKDEV = 4;
 const int EXT2_DIR_TYPE_FIFO = 5;
@@ -77,5 +77,6 @@ const int EXT2_DIR_TYPE_SYMLINK = 7;
 
 const string DELIMITER_SPACE = " ";
 const string DELIMITER_FSLASH = "/";
+const string DELIMITER_DOT = ".";
 
 #endif
