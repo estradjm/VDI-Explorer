@@ -156,7 +156,6 @@ namespace vdi_explorer
     
     void interface::command_cd(const string & directory)
     {
-        // cout << "Not implemented yet.\n";
         file_system->set_pwd(directory);
         return;
     }
@@ -342,6 +341,10 @@ namespace vdi_explorer
             return code_help;
         }
         else if (command == "ls")
+        {
+            return code_ls;
+        }
+                else if (command == "ls -l") // long list version of ls
         {
             return code_ls;
         }

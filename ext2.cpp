@@ -150,7 +150,7 @@ namespace vdi_explorer
      *          directory.
      *
      * @TODO    Optimize.
-     * @TODO    Investigate segfault in "/lost+found". *** HIGH ***
+     * @TODO    Investigate segfault in "/lost+found". *** HIGH *** -> traced to ext2::parse_directory_inode
     ----------------------------------------------------------------------------------------------*/
     vector<fs_entry_posix> ext2::get_directory_contents(void)
     {
@@ -519,7 +519,11 @@ namespace vdi_explorer
      * Output:  vector<ext2_dir_entry>, contains a vector holding the contents of the inode.
      *
      * @TODO    Verify that it's ok to read just from i_block[0] for a directory inode. <- it's not
-    ----------------------------------------------------------------------------------------------*/
+     *          When attempting to parse the lost+found directory, this behavior causes a segfault.
+     *          Determine whether to add a special case for lost+found or to modify function to be
+     *          be able to handle an arbitrary number of blocks, including direct, indirect, and
+     *          doubly indirect.
+----------------------------------------------------------------------------------------------*/
     vector<ext2::ext2_dir_entry> ext2::parse_directory_inode(ext2_inode inode)
     {
         vector<ext2_dir_entry> to_return;
