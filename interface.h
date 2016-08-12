@@ -26,10 +26,11 @@ namespace vdi_explorer
                 code_help,
                 code_ls,
                 code_pwd
-                // Debug
+                // Debug.
                 , code_dump_pwd_inode
                 , code_dump_block
                 , code_dump_inode
+                // End debug.
             };
             
             void command_cd(const string &);

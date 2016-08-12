@@ -150,7 +150,6 @@ namespace vdi_explorer
      *          directory.
      *
      * @TODO    Optimize.
-     * @TODO    Investigate segfault in "/lost+found". *** HIGH *** -> traced to ext2::parse_directory_inode
     ----------------------------------------------------------------------------------------------*/
     vector<fs_entry_posix> ext2::get_directory_contents(void)
     {
@@ -215,9 +214,7 @@ namespace vdi_explorer
      * Input:   string, containing the path to and name of the desired working directory.
      * Output:  Nothing.
      *
-     * @TODO    Add proper handling for full paths and relative paths beyond one level away.
-     * @TODO    Add proper handling of '.' and '..' directories.
-     * #TODO    Investigate segfault after some number of '..' directory changes. *** HIGH ***
+     * @TODO    Clean out dead code. / Make code look pretty.
     ----------------------------------------------------------------------------------------------*/
     void ext2::set_pwd(const string & desired_pwd)
     {
@@ -517,13 +514,7 @@ namespace vdi_explorer
      *          files in a vector container.
      * Input:   ext2_inode inode, containing an inode object.
      * Output:  vector<ext2_dir_entry>, contains a vector holding the contents of the inode.
-     *
-     * @TODO    Verify that it's ok to read just from i_block[0] for a directory inode. <- it's not
-     *          When attempting to parse the lost+found directory, this behavior causes a segfault.
-     *          Determine whether to add a special case for lost+found or to modify function to be
-     *          be able to handle an arbitrary number of blocks, including direct, indirect, and
-     *          doubly indirect.
-----------------------------------------------------------------------------------------------*/
+    ----------------------------------------------------------------------------------------------*/
     vector<ext2::ext2_dir_entry> ext2::parse_directory_inode(ext2_inode inode)
     {
         vector<ext2_dir_entry> to_return;
@@ -532,45 +523,62 @@ namespace vdi_explorer
         u8* inode_buffer = nullptr;
         
         // Attempt to allocate and then verify memory for the inode buffer.
-        inode_buffer = new u8[inode.i_size];
+        inode_buffer = new u8[EXT2_BLOCK_BASE_SIZE << superBlock.s_log_block_size];
         if (inode_buffer == nullptr)
         {
             cout << "Error allocating directory inode buffer.";
             throw;
         }
         
-        // Set the offset to the beginning of the block referenced by the inode.
-        vdi->vdiSeek(blockToOffset(inode.i_block[0]), SEEK_SET);
-        
-        // Read the contents of the block into memory, based on the given size.
-        vdi->vdiRead(inode_buffer, inode.i_size);
-        
-        // Iterate through the inode buffer, reading the directory entry records.
-        while (cursor < inode.i_size)
+        // Iterate through the direct block pointer portion of the directory inode's i_block array.
+        for (s32 i = 0; i < EXT2_INODE_NBLOCKS_DIR; i++)
         {
-            // Add a new ext2_dir_entry to the back of the vector.
-            to_return.emplace_back();
+            // Set the offset to the beginning of the block referenced by the inode.
+            vdi->vdiSeek(blockToOffset(inode.i_block[0]), SEEK_SET);
             
-            // Read inode, record length, name length, and file type.
-            memcpy(&(to_return.back()), &(inode_buffer[cursor]), EXT2_DIR_BASE_SIZE);
-            cursor += EXT2_DIR_BASE_SIZE;
+            // Read the contents of the block into memory, based on the given size.
+            vdi->vdiRead(inode_buffer, EXT2_BLOCK_BASE_SIZE << superBlock.s_log_block_size);
             
-            // Read the name into the buffer.
-            memcpy(name_buffer, &(inode_buffer[cursor]), to_return.back().name_len);
-            cursor += to_return.back().name_len;
-            
-            // Add a null to the end of the characters read in so it becomes a C-style string.
-            name_buffer[to_return.back().name_len] = '\0';
-            
-            // Store the name in the record.
-            to_return.back().name.assign(name_buffer);
-            
-            // Set the offset to the next record.
-            if (EXT2_DIR_BASE_SIZE + to_return.back().name_len < to_return.back().rec_len)
-                cursor += to_return.back().rec_len - EXT2_DIR_BASE_SIZE - to_return.back().name_len;
-            
-            cout << "\ndebug::ext2::ext2_dir_entry\n";
-            print_dir_entry(to_return.back());
+            // Iterate through the inode buffer, reading the directory entry records.
+            while (cursor < (EXT2_BLOCK_BASE_SIZE << superBlock.s_log_block_size))
+            {
+                // Declare a new ext2_dir_entry every loop.
+                ext2_dir_entry to_add;
+                
+                // Read inode, record length, name length, and file type.
+                memcpy(&to_add, &(inode_buffer[cursor]), EXT2_DIR_BASE_SIZE);
+                
+                // Check if the name length is 0.  If so, skip record.
+                if (to_add.name_len == 0)
+                {
+                    cursor += to_add.rec_len;
+                    continue;
+                }
+                else
+                {
+                    cursor += EXT2_DIR_BASE_SIZE;
+                }
+
+                // Read the name into the buffer.
+                memcpy(name_buffer, &(inode_buffer[cursor]), to_add.name_len);
+                cursor += to_add.name_len;
+                
+                // Add a null to the end of the characters read in so it becomes a C-style string.
+                name_buffer[to_add.name_len] = '\0';
+                
+                // Store the name in the record.
+                to_add.name.assign(name_buffer);
+                
+                // Set the offset to the next record.
+                if (EXT2_DIR_BASE_SIZE + to_add.name_len < to_add.rec_len)
+                    cursor += to_add.rec_len - EXT2_DIR_BASE_SIZE - to_add.name_len;
+                
+                // Add the ext2_dir_entry to the vector.
+                to_return.push_back(to_add);
+                
+                cout << "\ndebug::ext2::ext2_dir_entry\n";
+                print_dir_entry(to_return.back());
+            }
         }
         
         // Free the inode buffer.
@@ -580,6 +588,7 @@ namespace vdi_explorer
         return to_return;
     }
     
+    
     /*----------------------------------------------------------------------------------------------
      * Name:    parse_directory_inode
      * Type:    Function
@@ -587,13 +596,12 @@ namespace vdi_explorer
      *          files in a vector container.
      * Input:   u32 inode, containing an inode number.
      * Output:  vector<ext2_dir_entry>, contains a vector holding the contents of the inode.
-     *
-     * @TODO    Verify that it's ok to read just from i_block[0] for a directory inode.
     ----------------------------------------------------------------------------------------------*/
     vector<ext2::ext2_dir_entry> ext2::parse_directory_inode(u32 inode)
     {
         return parse_directory_inode(readInode(inode));
     }
+    
     
     /*----------------------------------------------------------------------------------------------
      * Name:    readInode

@@ -4,12 +4,14 @@
 #include "utility.h"
 
 #include <cstdlib>
+#include <fstream>
 #include <iostream>
 #include <iomanip>
 #include <string>
 #include <stdexcept>
 #include <stdio.h>
 
+/* these can be erased, I believe...
 #define RESET		0
 #define BRIGHT 		1
 #define DIM		    2
@@ -17,7 +19,7 @@
 #define BLINK		4
 #define REVERSE		7
 #define HIDDEN		8
-
+// these too...
 #define BLACK 		0
 #define RED		    1
 #define GREEN		2
@@ -26,6 +28,7 @@
 #define MAGENTA		5
 #define CYAN		6
 #define	WHITE		7
+*/
 
 using namespace std;
 using namespace vdi_explorer;
@@ -165,9 +168,34 @@ namespace vdi_explorer
                                const string & copy_from,
                                const string & copy_to)
     {
-        // stub
-        cout << "Not implemented yet.\n";
-        return;
+        cout << "*** Implementation in progress.  Bust out the bugspray. ***\n";
+        
+        fstream os_file;
+        
+        if (direction == "in")
+        {
+            cout << "Not implemented yet.\n";
+            return;
+        }
+        else if (direction == "out")
+        {
+            // Attempt to open the file for input to see if it already exists.
+            os_file.open(copy_to, ios_base::in);
+            bool file_exists = os_file.good();
+            os_file.close();
+            
+            // Actually check if the file exists.
+            if (file_exists)
+            {
+                cout << "Error, file already exists.";
+                return;
+            }
+            else
+            {
+                // Actually copy file out from the other file system.
+                file_system->to_be_determined(&os_file, copy_from); 
+            }
+        }
     }
     
     
@@ -213,7 +241,8 @@ namespace vdi_explorer
             else 
                 cout << file_listing[i].name;
             
-            cout << "\t";
+                cout << "\t";
+
         }
         return;
     }
@@ -344,7 +373,7 @@ namespace vdi_explorer
         {
             return code_ls;
         }
-                else if (command == "ls -l") // long list version of ls
+        else if (command == "ls -l") // long list version of ls
         {
             return code_ls;
         }
