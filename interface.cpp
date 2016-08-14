@@ -9,7 +9,7 @@
 #include <iomanip>
 #include <string>
 #include <stdexcept>
-#include <stdio.h>
+#include <cstdio>
 
 /* these can be erased, I believe...
 #define RESET		0
@@ -192,8 +192,22 @@ namespace vdi_explorer
             }
             else
             {
+                // Open file for writing.
+                os_file.open(copy_to, ios_base::out);
+                if (!os_file.good())
+                {
+                    cout << "Error opening file for writing.\n";
+                    return;
+                }
+                
                 // Actually copy file out from the other file system.
-                file_system->to_be_determined(&os_file, copy_from); 
+                bool successful = file_system->file_read(os_file, copy_from);
+                os_file.close();
+                
+                if (!successful)
+                {
+                    remove(copy_to.c_str());
+                }
             }
         }
     }

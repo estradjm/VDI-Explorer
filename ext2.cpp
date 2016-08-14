@@ -12,6 +12,8 @@
 #include "datatypes.h"
 #include "ext2.h"
 #include "vdi_reader.h"
+
+#include <fstream>
 #include <iostream>
 #include <iomanip>
 #include <fcntl.h>
@@ -153,19 +155,23 @@ namespace vdi_explorer
     ----------------------------------------------------------------------------------------------*/
     vector<fs_entry_posix> ext2::get_directory_contents(void)
     {
-        // stub
         vector<fs_entry_posix> to_return;
         ext2_inode temp_inode;
         
+        // Parse the contents of the current directory.
         vector<ext2_dir_entry> directory_contents = parse_directory_inode(pwd.back().inode);
-
+        
+        // Instead of returning the raw contents, add a layer of abstraction to help facilitate
+        // future design plans (eventual support for different filesystems).
         for (u32 i = 0; i < directory_contents.size(); i++)
         {
+            // Read the entry's inode to gather data.
             temp_inode = readInode(directory_contents[i].inode);
             
+            // Add an fs_entry_posix object to the back of the to_return vector and fill it with the
+            // appropriate data.
             to_return.emplace_back();
             to_return.back().name = directory_contents[i].name;
-            // to_return.back().type = (temp_inode.i_mode & 0xf000) >> 12 ; // mask for the top 4 bits
             to_return.back().type = directory_contents[i].file_type;
             to_return.back().permissions = temp_inode.i_mode & 0x0fff; // mask for the bottom 12 bits
             to_return.back().size = temp_inode.i_size;
@@ -250,6 +256,43 @@ namespace vdi_explorer
     }
 
     
+    /*----------------------------------------------------------------------------------------------
+     * Name:    file_read
+     * Type:    Function
+     * Purpose: 
+     * Input:   fstream & output_file, 
+     * Input:   const string file_to_read, 
+     * Output:  bool, representing whether the file was found and read (true) or not (false).
+    ----------------------------------------------------------------------------------------------*/
+    bool ext2::file_read(fstream & output_file, const string & file_to_read)
+    {
+        // locate file -  restrict to pwd or allow path?
+        // figure out a good way to navigate inode block structure
+        //   read blocks into buffer
+        //   write blocks into output_file
+        
+        // Check if the file specified in file_to_read exists or not, and if it does, its inode
+        // number will be stored in file_inode.
+        
+        // prototype to use
+        // bool file_entry_exists(const string &, u32 &);
+        
+        u32 file_inode = 0;
+        if (file_entry_exists(file_to_read, file_inode))
+        {
+            // read inode
+            // run through singly 
+            cout << "debug >> ext2::file_read >> file exists\n";
+            return true;
+        }
+        else
+        {
+            cout << "debug >> ext2::file_read >> file does not exist\n";
+            return false;
+        }
+    }
+
+
     /*----------------------------------------------------------------------------------------------
      * Name:    offsetToBlock
      * Type:    Function
@@ -533,8 +576,15 @@ namespace vdi_explorer
         // Iterate through the direct block pointer portion of the directory inode's i_block array.
         for (s32 i = 0; i < EXT2_INODE_NBLOCKS_DIR; i++)
         {
+            // Checks to make sure the i_block entry actually points somewhere.
+            if (inode.i_block[i] == 0)
+            {
+                // If it does not, continue to the next block pointer.
+                continue;
+            }
+            
             // Set the offset to the beginning of the block referenced by the inode.
-            vdi->vdiSeek(blockToOffset(inode.i_block[0]), SEEK_SET);
+            vdi->vdiSeek(blockToOffset(inode.i_block[i]), SEEK_SET);
             
             // Read the contents of the block into memory, based on the given size.
             vdi->vdiRead(inode_buffer, EXT2_BLOCK_BASE_SIZE << superBlock.s_log_block_size);
@@ -632,23 +682,26 @@ namespace vdi_explorer
     /*----------------------------------------------------------------------------------------------
      * Name:    dir_entry_exists
      * Type:    Function
-     * Purpose: Small function that verifies a path exists.
+     * Purpose: Verifies whether a path exists or not.
      * Input:   const string & path_to_check, containing the path to verify.
      * Output:  vector<ext2_dir_entry>, containing ext2_dir_entry objects representing the path to
      *          the desired folder if it is found, or containing nothing if not found.
     ----------------------------------------------------------------------------------------------*/
-    vector<ext2::ext2_dir_entry> ext2::dir_entry_exists(const string & path_to_check){
+    vector<ext2::ext2_dir_entry> ext2::dir_entry_exists(const string & path_to_check)
+    {
         // Tokenize the path that will be checked.
         vector<string> path_tokens = utility::tokenize(path_to_check, DELIMITER_FSLASH);
         
         vector<ext2_dir_entry> to_return;
         
         // Check if the given path is relative or absolute.
-        if(path_to_check[0] == '/') {
+        if(path_to_check[0] == '/')
+        {
             // Absolute path given.
             to_return.push_back(pwd.front());
         }
-        else {
+        else
+        {
             // Relative path given.
             to_return = pwd;
         }
@@ -657,7 +710,8 @@ namespace vdi_explorer
         bool found_dir = true;
         
         // Loop through the path_tokens vector, following the user's desired path sequentially.
-        for (u32 i = 0; found_dir == true && i < path_tokens.size(); i++) {
+        for (u32 i = 0; found_dir == true && i < path_tokens.size(); i++)
+        {
             // Parse the current inode for its directory structure.
             current_dir_parse = parse_directory_inode(to_return.back().inode);
             
@@ -665,23 +719,30 @@ namespace vdi_explorer
             found_dir = false;
             
             // Loop through the parsed directory listing to attempt to find a match.
-            for (u32 j = 0; j < current_dir_parse.size(); j++) {
+            for (u32 j = 0; j < current_dir_parse.size(); j++)
+            {
                 // First, check if the directory entry is a folder.
-                if (current_dir_parse[j].file_type == 2) {
+                if (current_dir_parse[j].file_type == 2)
+                {
                     // Then check if the names match.
-                    if (path_tokens[i] == current_dir_parse[j].name) {
+                    if (path_tokens[i] == current_dir_parse[j].name)
+                    {
                         // If the directory entry is a folder and the names match, handle the
                         // different scenarios.
-                        if (path_tokens[i] == ".") {
+                        if (path_tokens[i] == ".")
+                        {
                             // Intentionally do nothing.
                         }
-                        else if (path_tokens[i] == "..") {
+                        else if (path_tokens[i] == "..")
+                        {
                             // Go up one level unless already at the filesystem root.
-                            if (to_return.size() > 1) {
+                            if (to_return.size() > 1)
+                            {
                                 to_return.pop_back();
                             }
                         }
-                        else {
+                        else
+                        {
                             // Add the directory entry to the to_return vector.
                             to_return.push_back(current_dir_parse[j]);
                         }
@@ -696,11 +757,131 @@ namespace vdi_explorer
         
         // If the directory was not found, clear the to_return vector.
         if (found_dir == false)
+        {
             to_return.clear();
+        }
         
         // Return the path to the folder.
         return to_return;
     } 
+    
+    
+    /*----------------------------------------------------------------------------------------------
+     * Name:    file_entry_exists
+     * Type:    Function
+     * Purpose: Verifies whether a file exists or not.
+     * Input:   const string & file_to_check, containing the path to verify.
+     * Output:  <reference> u32 & file_inode, will hold the file's inode number, should the file
+     *          exist.
+     * Output:  bool, detailing whether the file exists (true) or does not (false).
+    ----------------------------------------------------------------------------------------------*/
+    bool ext2::file_entry_exists(const string & file_to_check, u32 & file_inode)
+    {
+        // // stub
+        // cout << "debug >> ext2::file_entry_exists >> not implemented yet\n";
+        // file_inode = 0;
+        // return false;
+        
+        vector<ext2_dir_entry> file_path = parse_directory_inode(pwd.back().inode);
+        for (u32 i = 0; i < file_path.size(); i++)
+        {
+            if (file_path[i].name == file_to_check)
+            {
+                file_inode = file_path[i].inode;
+                return true;
+            }
+        }
+        
+        return false;
+        
+        /***   START ACTUAL CODE   ***/
+        // @TODO convert code from dir_entry_exists
+        // @TODO do a deep examination of the algorithm to ensure it's appropriate for files
+        
+        // tokenize
+        // determine if relative path or local path
+        // loop through the path vector
+        
+        
+        // Tokenize the path that will be checked.
+        // vector<string> path_tokens = utility::tokenize(file_to_check, DELIMITER_FSLASH);
+        
+        // vector<ext2_dir_entry> file_path;
+        
+        // // Check if the given path is relative or absolute.
+        // if (file_to_check[0] == '/')
+        // {
+        //     // Absolute path given.
+        //     file_path.push_back(pwd.front());
+        // }
+        // else
+        // {
+        //     // Relative path given.
+        //     file_path = pwd;
+        // }
+        
+        // vector<ext2_dir_entry> current_dir_parse;
+        // bool found_dir_entry = true;
+        
+        // // Loop through the path_tokens vector, following the user's desired path sequentially.
+        // for (u32 i = 0; found_dir_entry == true && i < path_tokens.size(); i++)
+        // {
+        //     // Parse the current inode for its directory structure.
+        //     current_dir_parse = parse_directory_inode(file_path.back().inode);
+            
+        //     // Reset the found directory flag on each iteration.
+        //     found_dir_entry = false;
+            
+        //     // Loop through the parsed directory listing to attempt to find a match.
+        //     for (u32 j = 0; j < current_dir_parse.size(); j++)
+        //     {
+        //         // Check if the names match.
+        //         if (path_tokens[i] == current_dir_parse[j].name)
+        //         {
+        //             // Check if the directory entry is a folder.
+        //             if (current_dir_parse[j].file_type == 2)
+        //             {
+        //                 // If the directory entry is a folder handle the different scenarios.
+        //                 if (path_tokens[i] == ".")
+        //                 {
+        //                     // Intentionally do nothing.
+        //                 }
+        //                 else if (path_tokens[i] == "..")
+        //                 {
+        //                     // Go up one level unless already at the filesystem root.
+        //                     if (file_path.size() > 1)
+        //                     {
+        //                         file_path.pop_back();
+        //                     }
+        //                 }
+        //                 else
+        //                 {
+        //                     // Add the directory entry to the file_path vector.
+        //                     file_path.push_back(current_dir_parse[j]);
+        //                 }
+                        
+        //                 // Set the found directory flag.
+        //                 found_dir_entry = true;
+        //                 break;
+        //             }
+        //             else if (current_dir_parse[j].file_type == 2)
+        //             {
+                        
+        //             }
+        //         }
+        //     }
+        // }
+        
+        // // If the directory was not found, clear the file_path vector.
+        // if (found_dir_entry == false)
+        // {
+        //     file_inode = file_path.back().inode;
+        // }
+        
+        // // Return true if the file was found, false if not.
+        // return found_dir_entry;
+        /***   END ACTUAL CODE   ***/
+    }
     
     
     void ext2::debug_dump_pwd_inode()
@@ -744,9 +925,13 @@ namespace vdi_explorer
         print_block(block_to_dump);
     }
     
+    
     void ext2::debug_dump_inode(u32 inode_to_dump)
     {
         ext2_inode inode = readInode(inode_to_dump);
         print_inode(&inode);
     }
+    
+    
+    
 } // namespace vdi_explorer

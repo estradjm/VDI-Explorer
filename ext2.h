@@ -9,6 +9,7 @@
 // Commenting this out because it causes a *lot* of problems when attempting to compile.
 // #include "ext2_fs.h"
 
+#include <fstream>
 #include <list>
 #include <string>
 #include <vector>
@@ -40,8 +41,9 @@ namespace vdi_explorer
             
             vector<fs_entry_posix> get_directory_contents();
             string get_pwd();
-            // bool change_pwd(string &);
-            void set_pwd(const string &); // return a bool to denote success/failure?
+            void set_pwd(const string &);
+            bool file_read(fstream &, const string &);
+            // void file_write(fstream &, const string &);
             
             // Public debug functions.
             void debug_dump_pwd_inode();
@@ -245,8 +247,11 @@ namespace vdi_explorer
             vector<ext2_dir_entry> parse_directory_inode(ext2_inode);
             vector<ext2_dir_entry> parse_directory_inode(u32);
             ext2_inode readInode(u32 inode);
-            // bool dir_entry_exists(const string &);
+            
+            // @TODO convert to using commented prototype and function
+            // bool dir_entry_exists(const string &, vector<ext2_dir_entry> &);
             vector<ext2_dir_entry> dir_entry_exists(const string &);  
+            bool file_entry_exists(const string &, u32 &);
             
             // Debug functions.
             void print_inode(ext2_inode *);
