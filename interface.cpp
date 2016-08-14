@@ -231,29 +231,37 @@ namespace vdi_explorer
         for (u32 i = 0; i < file_listing.size(); i++)
         {
             filename_tokens = utility::tokenize(file_listing[i].name, DELIMITER_DOT);
-            string file_extension = (filename_tokens.size() == true ? filename_tokens.back() : "");
+            string file_extension = (filename_tokens.size() > 1 ? filename_tokens.back() : ""); // minor fix for extensions
             if (file_listing[i].type == EXT2_DIR_TYPE_DIR)
                 cout << "\033[1;34m" << file_listing[i].name << "\033[0m"; //blue (bold) - directory or recognized data file
-            else if (file_listing[i].type == EXT2_INODE_TYPE_FILE &&
+            else if ((file_listing[i].type == EXT2_DIR_TYPE_FILE) &&
                     (file_listing[i].permissions & EXT2_INODE_PERM_USER_EXECUTE ||
                      file_listing[i].permissions & EXT2_INODE_PERM_GROUP_EXECUTE ||
-                     file_listing[i].permissions & EXT2_INODE_PERM_OTHER_EXECUTE))
+                     file_listing[i].permissions & EXT2_INODE_PERM_OTHER_EXECUTE)){
                 cout << "\033[2;31m" << file_listing[i].name << "\033[0m"; //green - executable files
+                     }
             else if (file_listing[i].type == EXT2_INODE_TYPE_SYMLINK)
                 cout << "\033[6;31m" << file_listing[i].name << "\033[0m"; //cyan - linked file
             else if (file_listing[i].type == EXT2_INODE_TYPE_SYMLINK)
                 cout << "\033[3;31m" << file_listing[i].name << "\033[0m"; //yellow (with black background) - device
-            else if (file_listing[i].type == EXT2_INODE_TYPE_SYMLINK)
-                cout << "\033[5;31m" << file_listing[i].name << "\033[0m"; //pink - graphic image file
-            else if (file_listing[i].type == EXT2_INODE_TYPE_FILE &&
+            else if ((file_listing[i].type == EXT2_DIR_TYPE_FILE) &&  
+                    (file_extension == "png" ||
+                     file_extension == "jpg" ||
+                     file_extension == "raw" ||
+                     file_extension == "gif" ||
+                     file_extension == "bmp" ||
+                     file_extension == "tif")){
+                cout << "\033[5;31m" << file_listing[i].name << "\033[0m"; }//pink - graphic image file
+            else if ((file_listing[i].type == EXT2_DIR_TYPE_FILE) &&
                     (file_extension == "zip" ||
                      file_extension == "tar" ||
                      file_extension == "rar" ||
+                     file_extension == ".tar.xz" ||
                      file_extension == "7z" ||
-                     file_extension == "xz"))
-                cout << "\033[0;31m" << file_listing[i].name << "\033[0m"; //red - archive file
+                     file_extension == "xz")){
+                cout << "\033[0;31m" << file_listing[i].name << "\033[0m"; }//red - archive file
             else 
-                cout << file_listing[i].name;
+                cout << file_extension << file_listing[i].name;
             
                 cout << "\t";
 
