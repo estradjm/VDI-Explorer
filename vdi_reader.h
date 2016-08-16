@@ -23,7 +23,7 @@ namespace vdi_explorer{
             void vdiClose();
             
             // Moves the file cursor to the specified place within the VDI file's virtual disk.
-            off_t vdiSeek (off_t offset, int anchor );
+            off_t vdiSeek(off_t offset, int anchor);
             
             // Reads count bytes from the file, placing them in the specified buffer.
             size_t vdiRead(void *buf, size_t count);

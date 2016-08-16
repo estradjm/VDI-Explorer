@@ -229,9 +229,11 @@ namespace vdi_explorer
             
             BootSector bootSector;
             ext2_superblock superBlock;
-            vdi_reader *vdi = nullptr;
+            vdi_reader * vdi = nullptr;
             
             u32 numBlockGroups;
+            
+            u32 block_size_actual = EXT2_BLOCK_BASE_SIZE;
             
             ext2_block_group_desc *bgdTable = nullptr;
             
@@ -252,6 +254,7 @@ namespace vdi_explorer
             // bool dir_entry_exists(const string &, vector<ext2_dir_entry> &);
             vector<ext2_dir_entry> dir_entry_exists(const string &);  
             bool file_entry_exists(const string &, u32 &);
+            list<u32> make_block_list(const u32);
             
             // Debug functions.
             void print_inode(ext2_inode *);

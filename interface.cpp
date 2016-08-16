@@ -193,7 +193,7 @@ namespace vdi_explorer
             else
             {
                 // Open file for writing.
-                os_file.open(copy_to, ios_base::out);
+                os_file.open(copy_to, ios::out | ios::binary);
                 if (!os_file.good())
                 {
                     cout << "Error opening file for writing.\n";

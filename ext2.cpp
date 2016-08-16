@@ -61,6 +61,9 @@ namespace vdi_explorer
                      EXT2_SUPERBLOCK_OFFSET, SEEK_SET);
         vdi->vdiRead(&superBlock, sizeof(ext2_superblock));
         
+        // Record the actual block size.
+        block_size_actual = EXT2_BLOCK_BASE_SIZE << superBlock.s_log_block_size;
+        
         // Debug info.
         print_superblock();
         // End debug info.
@@ -281,8 +284,26 @@ namespace vdi_explorer
         if (file_entry_exists(file_to_read, file_inode))
         {
             // read inode
-            // run through singly 
+            // run through direct block pointers
+            // how are large files laid out in the inode?
+            //   direct used as well as indirects?
+            //   just indirects?
+            
+            size_t file_size = readInode(file_inode).i_size;
             cout << "debug >> ext2::file_read >> file exists\n";
+            list<u32> file_block_list = make_block_list(file_inode);
+            list<u32>::iterator iter = file_block_list.begin();
+            size_t bytes_read = 0;
+            size_t bytes_to_read = 0;
+            
+            while (bytes_read < file_size)
+            {
+                bytes_to_read = (block_size_actual > file_size ? block_size_actual : file_size);
+                // vdi->vdiSeek();
+                // vdi->vdiRead();
+                output_file.write(something);
+            }
+            
             return true;
         }
         else
