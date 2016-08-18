@@ -283,32 +283,55 @@ namespace vdi_explorer
         u32 file_inode = 0;
         if (file_entry_exists(file_to_read, file_inode))
         {
-            // read inode
-            // run through direct block pointers
-            // how are large files laid out in the inode?
-            //   direct used as well as indirects?
-            //   just indirects?
-            
-            size_t file_size = readInode(file_inode).i_size;
             cout << "debug >> ext2::file_read >> file exists\n";
+            
+            // Get the file size.
+            size_t file_size = readInode(file_inode).i_size;
+            
+            // Unroll the block chain where the file resides.
+            // @TODO Code this function.
             list<u32> file_block_list = make_block_list(file_inode);
+            
+            // Set up an iterator to go through the block list.
             list<u32>::iterator iter = file_block_list.begin();
+            
+            // Set up some housekeeping variables.
             size_t bytes_read = 0;
             size_t bytes_to_read = 0;
             
+            // Buffer to receive the file contents.
+            u8 * read_buffer = new u8[block_size_actual];
+            
+            // Loop until the whole file has been read.
+            // @TODO determine if a (iter != file_block_list.end()) condition should be added.
             while (bytes_read < file_size)
             {
+                // Determine how many bytes to read.  Read a full block if possible, otherwise read
+                // just until the end of the file.
                 bytes_to_read = (block_size_actual > file_size ? block_size_actual : file_size);
-                // vdi->vdiSeek();
-                // vdi->vdiRead();
-                output_file.write(something);
+                
+                // Set the VDI seek pointer to the apropriate position and then read the designated
+                // number of bytes.
+                vdi->vdiSeek(blockToOffset(*iter), SEEK_SET);
+                vdi->vdiRead(read_buffer, bytes_to_read);
+                
+                // Immediately write the buffer to file.
+                output_file.write(read_buffer, bytes_to_read);
+                
+                // Get set up to do the next read by setting the iterated to the next block in the
+                // chain and incrementing the number of bytes that have been read.
+                iter++;
+                bytes_read += bytes_to_read;
             }
             
+            // Release the read buffer's memory and return.
+            delete[] read_buffer;
             return true;
         }
         else
         {
             cout << "debug >> ext2::file_read >> file does not exist\n";
+            // The file does not exist, so return false.
             return false;
         }
     }
@@ -790,7 +813,7 @@ namespace vdi_explorer
     /*----------------------------------------------------------------------------------------------
      * Name:    file_entry_exists
      * Type:    Function
-     * Purpose: Verifies whether a file exists or not.
+     * Purpose: Verifies whether a file exists or not. Only checks in the pwd.
      * Input:   const string & file_to_check, containing the path to verify.
      * Output:  <reference> u32 & file_inode, will hold the file's inode number, should the file
      *          exist.
@@ -798,22 +821,26 @@ namespace vdi_explorer
     ----------------------------------------------------------------------------------------------*/
     bool ext2::file_entry_exists(const string & file_to_check, u32 & file_inode)
     {
-        // // stub
-        // cout << "debug >> ext2::file_entry_exists >> not implemented yet\n";
-        // file_inode = 0;
-        // return false;
-        
+        // Parse the present working directory.
         vector<ext2_dir_entry> file_path = parse_directory_inode(pwd.back().inode);
+        
+        // Loop through the contents of the pwd looking for a name match.
         for (u32 i = 0; i < file_path.size(); i++)
         {
-            if (file_path[i].name == file_to_check)
+            // Check the name, and if the name matches, make sure it's not a directory.
+            if (file_path[i].name == file_to_check && file_path[i].file_type != EXT2_DIR_TYPE_DIR)
             {
+                // Assuming the entry is indeed a file, store the file's inode and return true.
                 file_inode = file_path[i].inode;
                 return true;
             }
         }
         
+        // File does not exist, so return false.
         return false;
+        
+        // Below is code to enable pathing support in the function.  It is currently not working and
+        // commented out due to needing to work on other more important things.
         
         /***   START ACTUAL CODE   ***/
         // @TODO convert code from dir_entry_exists
@@ -954,5 +981,11 @@ namespace vdi_explorer
     }
     
     
-    
+    // @TODO add function description comment block here
+    list<u32> ext2::make_block_list(const u32 inode)
+    {
+        list<u32> to_return;
+        
+        
+    }
 } // namespace vdi_explorer
