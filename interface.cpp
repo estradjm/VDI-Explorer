@@ -1,3 +1,13 @@
+/*--------------------------------------------------------------------------------------------------
+ * Author:      
+ * Date:        2016-08-18
+ * Assignment:  Final Project
+ * Source File: interface.cpp
+ * Language:    C/C++
+ * Course:      Operating Systems
+ * Purpose:     Contains the implementation of the interface class.
+ -------------------------------------------------------------------------------------------------*/
+
 #include "constants.h"
 #include "ext2.h"
 #include "interface.h"

@@ -1,4 +1,13 @@
-
+/*--------------------------------------------------------------------------------------------------
+ * Author:      
+ * Date:        2016-08-18
+ * Assignment:  Final Project
+ * Source File: main.cpp
+ * Language:    C/C++
+ * Course:      Operating Systems
+ * Purpose:     Contains the implementation of main.
+ -------------------------------------------------------------------------------------------------*/
+ 
 #include <iostream>
 #include "ext2.h"
 #include "interface.h"

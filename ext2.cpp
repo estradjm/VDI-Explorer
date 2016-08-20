@@ -297,10 +297,11 @@ namespace vdi_explorer
             
             // Set up some housekeeping variables.
             size_t bytes_read = 0;
-            size_t bytes_to_read = 0;
+            size_t bytes_to_read = 0; 
+            
             
             // Buffer to receive the file contents.
-            u8 * read_buffer = new u8[block_size_actual];
+            char * read_buffer = new char[block_size_actual]; // changed from u8 to char type to enable compilation
             
             // Loop until the whole file has been read.
             // @TODO determine if a (iter != file_block_list.end()) condition should be added.
@@ -981,11 +982,17 @@ namespace vdi_explorer
     }
     
     
-    // @TODO add function description comment block here
+/*----------------------------------------------------------------------------------------------
+     * Name:    make block list
+     * Type:    Function
+     * Purpose: 
+     * Input:   const u32 inode
+     * Output:  list, u32
+    ----------------------------------------------------------------------------------------------*/
     list<u32> ext2::make_block_list(const u32 inode)
     {
         list<u32> to_return;
         
-        
+        return to_return; // placeholder to make compiler complacent
     }
 } // namespace vdi_explorer
