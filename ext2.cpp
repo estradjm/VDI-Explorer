@@ -982,12 +982,16 @@ namespace vdi_explorer
     }
     
     
-/*----------------------------------------------------------------------------------------------
-     * Name:    make block list
+    /*----------------------------------------------------------------------------------------------
+     * Name:    make_block_list
      * Type:    Function
-     * Purpose: 
-     * Input:   const u32 inode
-     * Output:  list, u32
+     * Purpose: Unrolls an inode, reading all the different blocks associated with a file, including
+     *          direct, singly indirect, doubly indirect, and triply indirect.  Will return a list
+     *          containing all of these block numbers, in order, so the file can be stitched
+     *          together.
+     * Input:   const u32 inode, holding the initial inode structure.
+     * Output:  list<u32>, containing a list of all the different block numbers where the file is
+     *          contained.
     ----------------------------------------------------------------------------------------------*/
     list<u32> ext2::make_block_list(const u32 inode)
     {

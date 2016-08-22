@@ -242,8 +242,15 @@ namespace vdi_explorer
         {
             filename_tokens = utility::tokenize(file_listing[i].name, DELIMITER_DOT);
             string file_extension = (filename_tokens.size() > 1 ? filename_tokens.back() : ""); // minor fix for extensions
-            if (file_listing[i].type == EXT2_DIR_TYPE_DIR)
-                cout << "\033[1;34m" << file_listing[i].name << "\033[0m"; //blue (bold) - directory or recognized data file
+            if (file_listing[i].type == EXT2_DIR_TYPE_DIR){
+                if (switches == "-l"){
+                    if (file_listing[i].name == "." || file_listing[i].name ==".."); // don't print out . and .. directories with -l switch
+                    else 
+                        cout << "\033[1;34m" << file_listing[i].name << "\033[0m"; //blue (bold) - directory or recognized data file                }
+                }
+                else 
+                    cout << "\033[1;34m" << file_listing[i].name << "\033[0m"; //blue (bold) - directory or recognized data file
+            }
             else if ((file_listing[i].type == EXT2_DIR_TYPE_FILE) &&
                     (file_listing[i].permissions & EXT2_INODE_PERM_USER_EXECUTE ||
                      file_listing[i].permissions & EXT2_INODE_PERM_GROUP_EXECUTE ||
@@ -273,12 +280,15 @@ namespace vdi_explorer
             else 
                 cout << file_extension << file_listing[i].name;
             
+            if ((switches == "-l" && (file_listing[i].name != "." && file_listing[i].name !="..")) || switches == "-al")
+                cout << "\n"; 
+            else if (switches == "-l" && (file_listing[i].name == "." || file_listing[i].name ==".."));
+            else
                 cout << "\t";
 
         }
         return;
     }
-    
     
     void interface::command_exit()
     {
