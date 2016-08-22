@@ -6,12 +6,12 @@
 
 <p>The user uses the program essentially like a linux terminal with the following commands:</p>
 
-  * `ls [-l]`  Create a listing of files and directory in current working directory, adding -l for the long list
-  * `pwd` Prints working directory
+  * `ls [-al]`  Create a listing of files and directory in current working directory, adding -l for the long list, and -al for long list with all hidden files shown as well.
+  * `pwd` Prints working directory.
   * `help {command}` Prints out command, usage, and what the command does. If no command specified, prints out all possible command information.
-  * `cd {directory}` Change directory
-  * `cp [in|out] {file_to_copy_from} {file_to_copy_to}` Copy a file between VDI and host
-  * `exit` Exit out of VDI file traversal program
+  * `cd {directory}` Change directory.
+  * `cp [in|out] {file_to_copy_from} {file_to_copy_to}` Copy a file between VDI and host.
+  * `exit` Exit out of VDI file traversal program.
 
 ##Installation:
 <p>To compile the project, type in the following commands: </p>
