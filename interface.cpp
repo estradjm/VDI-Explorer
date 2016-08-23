@@ -207,15 +207,9 @@ namespace vdi_explorer
     
     // @TODO format output neatly into appropriately sized columns -> function in utility?
     // @TODO sort vector by name
-    // @TODO implement "a" and "l" switches
     // @TODO colorize: 
-        // Blue: Directory
-        // Green: Executable or recognized data file
-        // Sky Blue: Linked file
         // Yellow with black background: Device
         // Pink: Graphic image file
-        // Red: Archive file
-    // @TODO add '/' to directories when displayed
     void interface::command_ls(const string & switches)
     {
         vector<fs_entry_posix> file_listing = file_system->get_directory_contents();
@@ -277,48 +271,49 @@ namespace vdi_explorer
                 cout << setw(10) << file_listing[i].size << " ";
                 
                 // translate unix epoch timestamps to readable time
-                time_t     now;
+                time_t     curr;
                 struct tm  ts;
                 char       buf[80];
-                now = file_listing[i].timestamp_modified;
-                ts = *localtime(&now);
+                curr = file_listing[i].timestamp_modified;
+                ts = *localtime(&curr);
                 strftime(buf, sizeof(buf), "%b %d %M:%S", &ts);
                 printf("%s ", buf);
 
                 }
             }
             if (file_listing[i].type == EXT2_DIR_TYPE_DIR){
-                if (switches == "-l"){
+                if (switches != "-al" ){
                     if (file_listing[i].name == "." || file_listing[i].name ==".."); // don't print out . and .. directories with -l switch
                     else 
-                        cout << "\033[1;34m" << file_listing[i].name << "\033[0m"; //blue (bold) - directory or recognized data file                }
+                        cout << "\033[1;34m" << file_listing[i].name << "\033[0m"<< "/"; //blue (bold) - directory or recognized data file                }
                 }
+                else if ((switches == "-al" ) && (file_listing[i].name == "." || file_listing[i].name ==".."))
+                    cout << "\033[1;34m" << file_listing[i].name << "\033[0m";
                 else 
-                    cout << "\033[1;34m" << file_listing[i].name << "\033[0m"; //blue (bold) - directory or recognized data file
+                    cout << "\033[1;34m" << file_listing[i].name << "\033[0m" << "/"; //blue (bold) - directory or recognized data file
             }
             else if ((file_listing[i].type == EXT2_DIR_TYPE_FILE) &&
                     (file_listing[i].permissions & EXT2_INODE_PERM_USER_EXECUTE ||
                      file_listing[i].permissions & EXT2_INODE_PERM_GROUP_EXECUTE ||
                      file_listing[i].permissions & EXT2_INODE_PERM_OTHER_EXECUTE)){
-                cout << "\033[2;31m" << file_listing[i].name << "\033[0m"; //green - executable files
-                     }
+                cout << "\033[1;32m" << file_listing[i].name << "\033[0m" << "*"; //green - executable files
+                     }  
             else if (file_listing[i].type == EXT2_INODE_TYPE_SYMLINK)
-                cout << "\033[6;31m" << file_listing[i].name << "\033[0m"; //cyan - linked file
+                cout << "\033[6;36m" << file_listing[i].name << "\033[0m"; //cyan - linked file
             else if (file_listing[i].type == EXT2_INODE_TYPE_SYMLINK)
-                cout << "\033[3;31m" << file_listing[i].name << "\033[0m"; //yellow (with black background) - device
+                cout << "\033[3;33m" << file_listing[i].name << "\033[0m"; //yellow (with black background) - device
             else if ((file_listing[i].type == EXT2_DIR_TYPE_FILE) &&  
                     (file_extension == "png" ||
                      file_extension == "jpg" ||
                      file_extension == "raw" ||
                      file_extension == "gif" ||
                      file_extension == "bmp" ||
-                     file_extension == "tif")){
+                     file_extension == "tif")){ //38 - black
                 cout << "\033[5;31m" << file_listing[i].name << "\033[0m"; }//pink - graphic image file
             else if ((file_listing[i].type == EXT2_DIR_TYPE_FILE) &&
                     (file_extension == "zip" ||
                      file_extension == "tar" ||
                      file_extension == "rar" ||
-                     file_extension == ".tar.xz" ||
                      file_extension == "7z" ||
                      file_extension == "xz")){
                 cout << "\033[0;31m" << file_listing[i].name << "\033[0m"; }//red - archive file
@@ -327,10 +322,9 @@ namespace vdi_explorer
             
             if ((switches == "-l" && (file_listing[i].name != "." && file_listing[i].name !="..")) || switches == "-al")
                 cout << "\n"; 
-            else if (switches == "-l" && (file_listing[i].name == "." || file_listing[i].name ==".."));
+            else if (switches != "-al" && (file_listing[i].name == "." || file_listing[i].name ==".."));
             else
                 cout << "\t";
-
         }
         return;
     }
