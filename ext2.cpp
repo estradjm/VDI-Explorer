@@ -1057,7 +1057,7 @@ namespace vdi_explorer
                 
                 for (u32 i = 0; i < block_size_actual / sizeof(u32) && s_ind_block_buffer[i] != 0; i++)
                 {
-                    //cout << "debug (ext2::make_block_list) adding doubly -> signly -> direct block " << s_ind_block_buffer[i] << endl;
+                    //cout << "debug (ext2::make_block_list) adding doubly -> singly -> direct block " << s_ind_block_buffer[i] << endl;
                     to_return.push_back(s_ind_block_buffer[i]);
                 }
             }
@@ -1082,7 +1082,7 @@ namespace vdi_explorer
                     
                     for (u32 i = 0; i < block_size_actual / sizeof(u32) && s_ind_block_buffer[i] != 0; i++)
                     {
-                        //cout << "debug (ext2::make_block_list) adding triply -> doubly -> signly -> direct block " << s_ind_block_buffer[i] << endl;
+                        //cout << "debug (ext2::make_block_list) adding triply -> doubly -> singly -> direct block " << s_ind_block_buffer[i] << endl;
                         to_return.push_back(s_ind_block_buffer[i]);
                     }
                 }
