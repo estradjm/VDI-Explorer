@@ -177,6 +177,8 @@ namespace vdi_explorer
             to_return.back().name = directory_contents[i].name;
             to_return.back().type = directory_contents[i].file_type;
             to_return.back().permissions = temp_inode.i_mode & 0x0fff; // mask for the bottom 12 bits
+            to_return.back().user_id = temp_inode.i_uid;
+            to_return.back().group_id = temp_inode.i_gid;
             to_return.back().size = temp_inode.i_size;
             to_return.back().timestamp_created = temp_inode.i_ctime;
             to_return.back().timestamp_modified = temp_inode.i_mtime;
@@ -318,6 +320,7 @@ namespace vdi_explorer
                 
                 // Immediately write the buffer to file.
                 output_file.write(read_buffer, bytes_to_read);
+                //output_file.
                 
                 // Get set up to do the next read by setting the iterated to the next block in the
                 // chain and incrementing the number of bytes that have been read.
@@ -989,14 +992,114 @@ namespace vdi_explorer
      *          direct, singly indirect, doubly indirect, and triply indirect.  Will return a list
      *          containing all of these block numbers, in order, so the file can be stitched
      *          together.
-     * Input:   const u32 inode, holding the initial inode structure.
+     * Input:   const u32 inode_number, holding the number of the initial inode.
      * Output:  list<u32>, containing a list of all the different block numbers where the file is
      *          contained.
     ----------------------------------------------------------------------------------------------*/
-    list<u32> ext2::make_block_list(const u32 inode)
+    list<u32> ext2::make_block_list(const u32 inode_number)
     {
         list<u32> to_return;
         
-        return to_return; // placeholder to make compiler complacent
+        u32 * s_ind_block_buffer = nullptr;
+        u32 * d_ind_block_buffer = nullptr;
+        u32 * t_ind_block_buffer = nullptr;
+        
+        ext2_inode inode = readInode(inode_number);
+        
+        // general algorithm for this function
+        // NOTE: THIS IS BRUTE FORCE AND REALLY UGLY AND NON-OPTIMIZED AND IT MAKES ME FEEL DIRTY
+        // @TODO: Optimize.
+        //
+        // read inode
+        // add direct block pointers to list
+        // read singly indirect block pointer
+        //   add direct block pointers to list
+        // read doubly indirect block pointer
+        //   read singly indirect block pointers
+        //     add direct block pointers to list
+        // read triply indirect block pointer
+        //   read doubly indirect block pointers
+        //     read singly indirect block pointers
+        //       add direct block pointers to list
+        
+        // direct
+        for (u32 i = 0; i < EXT2_INODE_NBLOCKS_DIR || inode.i_block[i] == 0; i++)
+        {
+             //cout << "debug (ext2::make_block_list) adding direct block " << inode.i_block[i] << endl;
+            to_return.push_back(inode.i_block[i]);
+        }
+        
+        // singly indirect
+        if (inode.i_block[EXT2_INODE_BLOCK_S_IND] != 0)
+        {
+            s_ind_block_buffer = new u32[block_size_actual / sizeof(u32)];
+            vdi->vdiSeek(blockToOffset(inode.i_block[EXT2_INODE_BLOCK_S_IND]), SEEK_SET);
+            vdi->vdiRead(s_ind_block_buffer, block_size_actual);
+            
+            for (u32 i = 0; i < block_size_actual / sizeof(u32) && s_ind_block_buffer[i] != 0; i++)
+            {
+                //cout << "debug (ext2::make_block_list) adding singly -> direct block " << s_ind_block_buffer[i] << endl;
+                to_return.push_back(s_ind_block_buffer[i]);
+            }
+        }
+        
+        // doubly indirect
+        if (inode.i_block[EXT2_INODE_BLOCK_D_IND] != 0)
+        {
+            d_ind_block_buffer = new u32[block_size_actual / sizeof(u32)];
+            vdi->vdiSeek(blockToOffset(inode.i_block[EXT2_INODE_BLOCK_D_IND]), SEEK_SET);
+            vdi->vdiRead(d_ind_block_buffer, block_size_actual);
+            
+            for (u32 j = 0; j < block_size_actual / sizeof(u32) && d_ind_block_buffer[j] != 0; j++)
+            {
+                vdi->vdiSeek(blockToOffset(d_ind_block_buffer[j]), SEEK_SET);
+                vdi->vdiRead(s_ind_block_buffer, block_size_actual);
+                
+                for (u32 i = 0; i < block_size_actual / sizeof(u32) && s_ind_block_buffer[i] != 0; i++)
+                {
+                    //cout << "debug (ext2::make_block_list) adding doubly -> signly -> direct block " << s_ind_block_buffer[i] << endl;
+                    to_return.push_back(s_ind_block_buffer[i]);
+                }
+            }
+        }
+        
+        // triply indirect
+        if (inode.i_block[EXT2_INODE_BLOCK_T_IND] != 0)
+        {
+            t_ind_block_buffer = new u32[block_size_actual / sizeof(u32)];
+            vdi->vdiSeek(blockToOffset(inode.i_block[EXT2_INODE_BLOCK_T_IND]), SEEK_SET);
+            vdi->vdiRead(t_ind_block_buffer, block_size_actual);
+            
+            for (u32 k = 0; k < block_size_actual / sizeof(u32) && t_ind_block_buffer[k] != 0; k++)
+            {
+                vdi->vdiSeek(blockToOffset(t_ind_block_buffer[k]), SEEK_SET);
+                vdi->vdiRead(d_ind_block_buffer, block_size_actual);
+                
+                for (u32 j = 0; j < block_size_actual / sizeof(u32) && d_ind_block_buffer[j] != 0; j++)
+                {
+                    vdi->vdiSeek(blockToOffset(d_ind_block_buffer[j]), SEEK_SET);
+                    vdi->vdiRead(s_ind_block_buffer, block_size_actual);
+                    
+                    for (u32 i = 0; i < block_size_actual / sizeof(u32) && s_ind_block_buffer[i] != 0; i++)
+                    {
+                        //cout << "debug (ext2::make_block_list) adding triply -> doubly -> signly -> direct block " << s_ind_block_buffer[i] << endl;
+                        to_return.push_back(s_ind_block_buffer[i]);
+                    }
+                }
+            }
+        }
+        
+        // Clean up the buffers.
+        if (s_ind_block_buffer)
+            delete[] s_ind_block_buffer;
+        if (d_ind_block_buffer)
+            delete[] d_ind_block_buffer;
+        if (t_ind_block_buffer)
+            delete[] t_ind_block_buffer;
+        
+        cout << "debug (ext2::make_block_list) leaving function\n";
+        
+        // Return the block list.
+        return to_return;
     }
 } // namespace vdi_explorer

@@ -23,6 +23,8 @@ struct fs_entry_posix
     // string path;
     u8 type; // currently matches the ext2 inode entry type mapping
     u16 permissions;
+    u16 user_id;
+    u16 group_id;
     u32 size;
     s64 timestamp_created;
     s64 timestamp_modified;
@@ -252,7 +254,7 @@ namespace vdi_explorer
             
             // @TODO convert to using commented prototype and function
             // bool dir_entry_exists(const string &, vector<ext2_dir_entry> &);
-            vector<ext2_dir_entry> dir_entry_exists(const string &);  
+            vector<ext2_dir_entry> dir_entry_exists(const string &);
             bool file_entry_exists(const string &, u32 &);
             list<u32> make_block_list(const u32);
             

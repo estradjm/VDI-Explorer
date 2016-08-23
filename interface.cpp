@@ -20,6 +20,7 @@
 #include <string>
 #include <stdexcept>
 #include <cstdio>
+#include <time.h>
 
 /* these can be erased, I believe...
 #define RESET		0
@@ -241,7 +242,70 @@ namespace vdi_explorer
         for (u32 i = 0; i < file_listing.size(); i++)
         {
             filename_tokens = utility::tokenize(file_listing[i].name, DELIMITER_DOT);
-            string file_extension = (filename_tokens.size() > 1 ? filename_tokens.back() : ""); // minor fix for extensions
+            string file_extension = (filename_tokens.size() > 1 ? filename_tokens.back() : ""); 
+            
+            if (switches == "-l" || switches == "-al"){
+                if (switches == "-l" && (file_listing[i].name == "." || file_listing[i].name ==".."));
+                else 
+                    { // list permissions for each file
+                if (file_listing[i].type == EXT2_DIR_TYPE_DIR)
+                    cout << "d";
+                else
+                    cout << "-";
+                if (file_listing[i].permissions & EXT2_INODE_PERM_USER_READ)
+                    cout << "r";
+                else 
+                    cout << "-"; 
+                if (file_listing[i].permissions & EXT2_INODE_PERM_USER_WRITE)
+                    cout << "w";
+                else 
+                    cout << "-";
+                if (file_listing[i].permissions & EXT2_INODE_PERM_USER_EXECUTE)
+                    cout << "x";
+                else 
+                    cout << "-";
+                if (file_listing[i].permissions & EXT2_INODE_PERM_GROUP_READ)
+                    cout << "r";
+                else 
+                    cout << "-"; 
+                if (file_listing[i].permissions & EXT2_INODE_PERM_GROUP_WRITE)
+                    cout << "w";
+                else 
+                    cout << "-";
+                if (file_listing[i].permissions & EXT2_INODE_PERM_GROUP_EXECUTE)
+                    cout << "x";
+                else 
+                    cout << "-";
+                if (file_listing[i].permissions & EXT2_INODE_PERM_OTHER_READ)
+                    cout << "r";
+                else 
+                    cout << "-"; 
+                if (file_listing[i].permissions & EXT2_INODE_PERM_OTHER_WRITE)
+                    cout << "w";
+                else 
+                    cout << "-";
+                if (file_listing[i].permissions & EXT2_INODE_PERM_OTHER_EXECUTE)
+                    cout << "x ";
+                else 
+                    cout << "- ";
+
+                // set file type, UID, GID, and size
+                cout << setw(2) << ((file_listing[i].type== EXT2_DIR_TYPE_DIR)?2:1)<< " ";
+                cout << setw(5) << file_listing[i].user_id<< " ";
+                cout << setw(5) << file_listing[i].group_id << " ";
+                cout << setw(10) << file_listing[i].size << " ";
+                
+                // translate unix epoch timestamps to readable time
+                time_t     now;
+                struct tm  ts;
+                char       buf[80];
+                now = file_listing[i].timestamp_modified;
+                ts = *localtime(&now);
+                strftime(buf, sizeof(buf), "%b %d %M:%S", &ts);
+                printf("%s ", buf);
+
+                }
+            }
             if (file_listing[i].type == EXT2_DIR_TYPE_DIR){
                 if (switches == "-l"){
                     if (file_listing[i].name == "." || file_listing[i].name ==".."); // don't print out . and .. directories with -l switch
