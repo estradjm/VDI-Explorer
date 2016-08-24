@@ -299,19 +299,18 @@ namespace vdi_explorer
             
             // Set up some housekeeping variables.
             size_t bytes_read = 0;
-            size_t bytes_to_read = 0; 
+            size_t bytes_to_read = 0;
             
-            
-            // Buffer to receive the file contents.
-            char * read_buffer = new char[block_size_actual]; // changed from u8 to char type to enable compilation
-            
+            // Buffer to receive the file contents. Must be char (versus u8) or compiler pukes.
+            char * read_buffer = new char[block_size_actual];
+
             // Loop until the whole file has been read.
             // @TODO determine if a (iter != file_block_list.end()) condition should be added.
             while (bytes_read < file_size)
             {
                 // Determine how many bytes to read.  Read a full block if possible, otherwise read
                 // just until the end of the file.
-                bytes_to_read = (block_size_actual > file_size ? block_size_actual : file_size);
+                bytes_to_read = (block_size_actual < file_size - bytes_read ? block_size_actual : file_size - bytes_read);
                 
                 // Set the VDI seek pointer to the apropriate position and then read the designated
                 // number of bytes.
@@ -1004,12 +1003,10 @@ namespace vdi_explorer
         u32 * d_ind_block_buffer = nullptr;
         u32 * t_ind_block_buffer = nullptr;
         
-        ext2_inode inode = readInode(inode_number);
-        
         // general algorithm for this function
-        // NOTE: THIS IS BRUTE FORCE AND REALLY UGLY AND NON-OPTIMIZED AND IT MAKES ME FEEL DIRTY
+        // NOTE: THIS IS BRUTE FORCE AND UGLY AND NOT AT ALL OPTIMIZED AND IT MAKES ME FEEL DIRTY
         // @TODO: Optimize.
-        //
+        // 
         // read inode
         // add direct block pointers to list
         // read singly indirect block pointer
@@ -1022,67 +1019,116 @@ namespace vdi_explorer
         //     read singly indirect block pointers
         //       add direct block pointers to list
         
-        // direct
+        // Read the inode.
+        ext2_inode inode = readInode(inode_number);
+        
+        // Direct
+        // Add the direct blocks contained in the inode entry itself.
         for (u32 i = 0; i < EXT2_INODE_NBLOCKS_DIR || inode.i_block[i] == 0; i++)
         {
-             //cout << "debug (ext2::make_block_list) adding direct block " << inode.i_block[i] << endl;
+            // Add the block to the block list.
             to_return.push_back(inode.i_block[i]);
         }
         
-        // singly indirect
+        // Singly Indirect
+        // Get and parse the singly indirect block and add its contents to the block list.
         if (inode.i_block[EXT2_INODE_BLOCK_S_IND] != 0)
         {
+            // Allocate (and check) some memory for the singly indirect block buffer.
             s_ind_block_buffer = new u32[block_size_actual / sizeof(u32)];
+            if (s_ind_block_buffer == nullptr)
+            {
+                cout << "Error allocating memory for the singly indirect block buffer.\n";
+                throw;
+            }
+            
+            // Set the cursor to and read from the particular block in question.
             vdi->vdiSeek(blockToOffset(inode.i_block[EXT2_INODE_BLOCK_S_IND]), SEEK_SET);
             vdi->vdiRead(s_ind_block_buffer, block_size_actual);
             
+            // Iterate through the read block and add the block numbers to the list.  Stop if an
+            // entry of 0 is encountered.
             for (u32 i = 0; i < block_size_actual / sizeof(u32) && s_ind_block_buffer[i] != 0; i++)
             {
-                //cout << "debug (ext2::make_block_list) adding singly -> direct block " << s_ind_block_buffer[i] << endl;
+                // Add the block to the block list.
                 to_return.push_back(s_ind_block_buffer[i]);
             }
         }
         
-        // doubly indirect
+        // Doubly Indirect
+        // Get and parse the doubly indirect block to get the list of singly indirect blocks, then
+        // parse them and add their contents to the block list.
         if (inode.i_block[EXT2_INODE_BLOCK_D_IND] != 0)
         {
+            // Allocate (and check) some memory for the doubly indirect block buffer.
             d_ind_block_buffer = new u32[block_size_actual / sizeof(u32)];
+            if (d_ind_block_buffer == nullptr)
+            {
+                cout << "Error allocating memory for the doubly indirect block buffer.\n";
+                throw;
+            }
+            
+            // Set the cursor to and read from the particular block in question.
             vdi->vdiSeek(blockToOffset(inode.i_block[EXT2_INODE_BLOCK_D_IND]), SEEK_SET);
             vdi->vdiRead(d_ind_block_buffer, block_size_actual);
             
+            // Iterate through the read block, parsing the singly indirect blocks that are found.
+            // Stop if an entry of 0 is encountered.
             for (u32 j = 0; j < block_size_actual / sizeof(u32) && d_ind_block_buffer[j] != 0; j++)
             {
+                // Set the cursor to and read from the particular block in question.
                 vdi->vdiSeek(blockToOffset(d_ind_block_buffer[j]), SEEK_SET);
                 vdi->vdiRead(s_ind_block_buffer, block_size_actual);
                 
+                // Iterate through the read block and add the block numbers to the list.  Stop if an
+                // entry of 0 is encountered.
                 for (u32 i = 0; i < block_size_actual / sizeof(u32) && s_ind_block_buffer[i] != 0; i++)
                 {
-                    //cout << "debug (ext2::make_block_list) adding doubly -> singly -> direct block " << s_ind_block_buffer[i] << endl;
+                    // Add the block to the block list.
                     to_return.push_back(s_ind_block_buffer[i]);
                 }
             }
         }
         
-        // triply indirect
+        // Triply Indirect
+        // Get and parse the triply indirect block to get the list of doubly indirect blocks to get
+        // the list of singly indirect blocks, then parse them and add their contents to the block
+        // list.
         if (inode.i_block[EXT2_INODE_BLOCK_T_IND] != 0)
         {
+            // Allocate (and check) some memory for the triply indirect block buffer.
             t_ind_block_buffer = new u32[block_size_actual / sizeof(u32)];
+            if (t_ind_block_buffer == nullptr)
+            {
+                cout << "Error allocating memory for the triply indirect block buffer.\n";
+                throw;
+            }
+            
+            // Set the cursor to and read from the particular block in question.
             vdi->vdiSeek(blockToOffset(inode.i_block[EXT2_INODE_BLOCK_T_IND]), SEEK_SET);
             vdi->vdiRead(t_ind_block_buffer, block_size_actual);
             
+            // Iterate through the read block, parsing the doubly indirect blocks that are found.
+            // Stop if an entry of 0 is encountered.
             for (u32 k = 0; k < block_size_actual / sizeof(u32) && t_ind_block_buffer[k] != 0; k++)
             {
+                // Set the cursor to and read from the particular block in question.
                 vdi->vdiSeek(blockToOffset(t_ind_block_buffer[k]), SEEK_SET);
                 vdi->vdiRead(d_ind_block_buffer, block_size_actual);
                 
+                // Iterate through the read block, parsing the singly indirect blocks that are
+                // found. Stop if an entry of 0 is encountered.
                 for (u32 j = 0; j < block_size_actual / sizeof(u32) && d_ind_block_buffer[j] != 0; j++)
                 {
+                    // Set the cursor to and read from the particular block in question.
                     vdi->vdiSeek(blockToOffset(d_ind_block_buffer[j]), SEEK_SET);
                     vdi->vdiRead(s_ind_block_buffer, block_size_actual);
                     
+                    // Iterate through the read block and add the block numbers to the list.  Stop
+                    // if an entry of 0 is encountered.
                     for (u32 i = 0; i < block_size_actual / sizeof(u32) && s_ind_block_buffer[i] != 0; i++)
                     {
-                        //cout << "debug (ext2::make_block_list) adding triply -> doubly -> singly -> direct block " << s_ind_block_buffer[i] << endl;
+                        // Add the block to the block list.
                         to_return.push_back(s_ind_block_buffer[i]);
                     }
                 }
