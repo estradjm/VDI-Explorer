@@ -318,7 +318,7 @@ namespace vdi_explorer
                      file_extension == "xz")){
                 cout << "\033[0;31m" << file_listing[i].name << "\033[0m"; }//red - archive file
             else 
-                cout << file_extension << file_listing[i].name;
+                cout << file_listing[i].name;
             
             if ((switches == "-l" && (file_listing[i].name != "." && file_listing[i].name !="..")) || switches == "-al")
                 cout << "\n"; 
