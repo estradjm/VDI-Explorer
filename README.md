@@ -1,4 +1,4 @@
-# VDI_Explorer 
+# <b> VDI_Explorer</b> : <em>Break Out Of The BOX</em>
 <p>Traversal and manipulation of an EXT2 Filesystem contained in VirtualBox .VDI File, without mounting in a virtual machine.</p>
 
 ##Description:
