@@ -264,26 +264,18 @@ namespace vdi_explorer
     /*----------------------------------------------------------------------------------------------
      * Name:    file_read
      * Type:    Function
-     * Purpose: 
-     * Input:   fstream & output_file, 
-     * Input:   const string file_to_read, 
+     * Purpose: Reads a file from the virtual filesystem and outputs it on to the host filesystem.
+     * Input:   fstream & output_file, contains the output file stream.
+     * Input:   const string & file_to_read, holds the name of the file to read from the virtual
+     *          filesystem.
      * Output:  bool, representing whether the file was found and read (true) or not (false).
     ----------------------------------------------------------------------------------------------*/
     bool ext2::file_read(fstream & output_file, const string & file_to_read)
     {
-        // locate file -  restrict to pwd or allow path?
-        // figure out a good way to navigate inode block structure
-        //   read blocks into buffer
-        //   write blocks into output_file
-        
         // Check if the file specified in file_to_read exists or not, and if it does, its inode
         // number will be stored in file_inode.
-        
-        // prototype to use
-        // bool file_entry_exists(const string &, u32 &);
-        
         u32 file_inode = 0;
-        if (file_entry_exists(file_to_read, file_inode))
+        if (file_entry_exists(file_to_read, file_inode) == true)
         {
             cout << "debug >> ext2::file_read >> file exists\n";
             
@@ -291,7 +283,6 @@ namespace vdi_explorer
             size_t file_size = readInode(file_inode).i_size;
             
             // Unroll the block chain where the file resides.
-            // @TODO Code this function.
             list<u32> file_block_list = make_block_list(file_inode);
             
             // Set up an iterator to go through the block list.
@@ -337,6 +328,134 @@ namespace vdi_explorer
             // The file does not exist, so return false.
             return false;
         }
+    }
+
+
+    /*----------------------------------------------------------------------------------------------
+     * Name:    file_write
+     * Type:    Function
+     * Purpose: Writes a file from the host filesystem and into the virtual filesystem.
+     * Input:   fstream & input_file, contains the input file stream.
+     * Input:   const string & file_to_write, holds the name of the file to write to in the virtual
+     *          filesystem.
+     * Output:  bool, representing whether the file was written (true) or not (false).
+    ----------------------------------------------------------------------------------------------*/
+    bool ext2::file_write(fstream & input_file, const string & file_to_write)
+    {
+        // General algorithm:
+        // Check if file already exists in the vfs
+        //   no:
+        //     (tasks to complete, not sure of exact order yet)
+        //     [x] determine input file size
+        //     [x] determine how many blocks the file is going to take
+        //     [ ] read block bitmap and determine free blocks
+        //     [ ] verify that there are enough free blocks to handle the file and supporting structures, such as inode and indirect blocks
+        //     [ ] make a list of free blocks that we plan on using
+        //     [ ] write incoming file to disk
+        //     [ ] record blocks in indirect block structures if necessary
+        //     [ ] build and write inode entry (don't forget about permissions!)
+        //     [ ] add ext2_dir_entry to directory inode
+        //     [ ] modify block bitmap
+        //
+        //     Double-check the filesystem bitmap documentation to make damn sure we don't overwrite
+        //     something critical.
+        
+        
+        /***   Determine file size.   ***/
+        // Assume that the file stream is at the beginning and record the position of the current
+        // character in the input stream.
+        std::streampos stream_size = input_file.tellg();
+        
+        // Seek to the end of the file.
+        input_file.seekg(0, std::ios::end);
+        
+        // Record the actual size as the end position minus the beginning position.
+        stream_size = input_file.tellg() - stream_size;
+        
+        // Seek back to the beginning of the file.
+        input_file.seekg(0, std::ios::beg);
+        
+        // Convert the stream size into file size.
+        size_t file_size = (u32)stream_size;
+        /***   End determine file size.   ***/
+        
+        
+        /***   Determine how many blocks the file will take up.   ***/
+        // The file will use at least file_size / block_size_actual number of blocks.  Because this
+        // uses integer division, the decimal is cut off, hence we use modulus to determine if the
+        // block count needs to be expanded by one to compensate.
+        u32 num_blocks = (file_size % block_size_actual ?
+                          file_size / block_size_actual + 1 :
+                          file_size / block_size_actual);
+        /***   End determine how many blocks the file will take up.   ***/
+        
+        
+        /***   Read block bitmap and determine free blocks.   ***/
+        // make function to handle this?
+        /***   End read block bitmap and determine free blocks.   ***/
+        
+        
+        /***   START CODE TO BE MODIFIED   ***/
+        // // Check if the file specified in file_to_write exists or not, and if it does, its inode
+        // // number will be stored in file_inode.
+        // u32 file_inode = 0;
+        // if (file_entry_exists(file_to_write, file_inode) == false)
+        // {
+        //     cout << "debug >> ext2::file_write >> file does not exist\n";
+            
+        //     // Get the file size.
+        //     size_t file_size = readInode(file_inode).i_size;
+            
+        //     // Unroll the block chain where the file resides.
+        //     // @TODO Code this function.
+        //     list<u32> file_block_list = make_block_list(file_inode);
+            
+        //     // Set up an iterator to go through the block list.
+        //     list<u32>::iterator iter = file_block_list.begin();
+            
+        //     // Set up some housekeeping variables.
+        //     size_t bytes_read = 0;
+        //     size_t bytes_to_read = 0;
+            
+        //     // Buffer to receive the file contents. Must be char (versus u8) or compiler pukes.
+        //     char * read_buffer = new char[block_size_actual];
+
+        //     // Loop until the whole file has been read.
+        //     // @TODO determine if a (iter != file_block_list.end()) condition should be added.
+        //     while (bytes_read < file_size)
+        //     {
+        //         // Determine how many bytes to read.  Read a full block if possible, otherwise read
+        //         // just until the end of the file.
+        //         bytes_to_read = (block_size_actual < file_size - bytes_read ? block_size_actual : file_size - bytes_read);
+                
+        //         // Set the VDI seek pointer to the apropriate position and then read the designated
+        //         // number of bytes.
+        //         vdi->vdiSeek(blockToOffset(*iter), SEEK_SET);
+        //         vdi->vdiRead(read_buffer, bytes_to_read);
+                
+        //         // Immediately write the buffer to file.
+        //         output_file.write(read_buffer, bytes_to_read);
+        //         //output_file.
+                
+        //         // Get set up to do the next read by setting the iterated to the next block in the
+        //         // chain and incrementing the number of bytes that have been read.
+        //         iter++;
+        //         bytes_read += bytes_to_read;
+        //     }
+            
+        //     // Release the read buffer's memory and return.
+        //     delete[] read_buffer;
+        //     return true;
+        // }
+        // else
+        // {
+        //     cout << "debug >> ext2::file_write >> file already exists\n";
+        //     // The file does not exist, so return false.
+        //     return false;
+        // }
+        
+        /***   END CODE TO BE MODIFIED   ***/
+        return false; // temp to appease the compiler gods
     }
 
 
@@ -824,6 +943,9 @@ namespace vdi_explorer
     ----------------------------------------------------------------------------------------------*/
     bool ext2::file_entry_exists(const string & file_to_check, u32 & file_inode)
     {
+        // Assume the file does not exist.
+        bool to_return = false;
+        
         // Parse the present working directory.
         vector<ext2_dir_entry> file_path = parse_directory_inode(pwd.back().inode);
         
@@ -833,14 +955,15 @@ namespace vdi_explorer
             // Check the name, and if the name matches, make sure it's not a directory.
             if (file_path[i].name == file_to_check && file_path[i].file_type != EXT2_DIR_TYPE_DIR)
             {
-                // Assuming the entry is indeed a file, store the file's inode and return true.
+                // Assuming the entry is indeed a file, store the file's inode and update the return
+                // value.
                 file_inode = file_path[i].inode;
-                return true;
+                to_return = true;
             }
         }
         
-        // File does not exist, so return false.
-        return false;
+        // Return whether the file exists or not.
+        return to_return;
         
         // Below is code to enable pathing support in the function.  It is currently not working and
         // commented out due to needing to work on other more important things.

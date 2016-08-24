@@ -45,7 +45,7 @@ namespace vdi_explorer
             string get_pwd();
             void set_pwd(const string &);
             bool file_read(fstream &, const string &);
-            // void file_write(fstream &, const string &);
+            bool file_write(fstream &, const string &);
             
             // Public debug functions.
             void debug_dump_pwd_inode();
