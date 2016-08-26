@@ -25,6 +25,8 @@ const int EXT2_SUPERBLOCK_SIZE = 1024; // The superblock is 1024 bytes long.
 const unsigned int EXT2_BLOCK_BASE_SIZE = 1024; // The base block size is 1024 bytes.
 const unsigned int EXT2_FRAG_BASE_SIZE = 1024; // The base fragment size is 1024 bytes.
 
+const int EXT2_BLOCK_POINTER_SIZE = 4; // The size of a block pointer in bytes.
+
 const int EXT2_INODE_NBLOCKS_DIR = 12; // The number of direct block pointers in an inode.
 const int EXT2_INODE_BLOCK_S_IND = EXT2_INODE_NBLOCKS_DIR; // Array location of the singly indirect block pointer in an inode.
 const int EXT2_INODE_BLOCK_D_IND = EXT2_INODE_BLOCK_S_IND + 1; // Array location of the doubly indirect block pointer in an inode.

@@ -347,18 +347,25 @@ namespace vdi_explorer
         //   no:
         //     (tasks to complete, not sure of exact order yet)
         //     [x] determine input file size
-        //     [x] determine how many blocks the file is going to take
-        //     [ ] read block bitmap and determine free blocks
-        //     [ ] verify that there are enough free blocks to handle the file and supporting structures, such as inode and indirect blocks
+        //     [ ] determine how many blocks the file is going to take including supporting
+        //         structures, such as inode and indirect blocks, and check directory inode to make
+        //         sure it can handle another ext2_dir_entry (or if it needs another block to handle
+        //         it)
+        //         @TODO find out if free inode count and free block count are synchronized, that is
+        //               does the number of free inodes go down when blocks are written to?
+        //     [x] count number of free blocks and inodes
+        //     [ ] verify that there are enough free blocks
         //     [ ] make a list of free blocks that we plan on using
         //     [ ] write incoming file to disk
         //     [ ] record blocks in indirect block structures if necessary
         //     [ ] build and write inode entry (don't forget about permissions!)
         //     [ ] add ext2_dir_entry to directory inode
         //     [ ] modify block bitmap
+        //     [ ] modify block group descriptor table in memory
+        //     [ ] modify block group descriptor table on disk
         //
-        //     Double-check the filesystem bitmap documentation to make damn sure we don't overwrite
-        //     something critical.
+        //     Double-check the filesystem documentation to make damn sure we don't overwrite or
+        //     miss something critical.
         
         
         /***   Determine file size.   ***/
@@ -381,18 +388,113 @@ namespace vdi_explorer
         
         
         /***   Determine how many blocks the file will take up.   ***/
+        // NOTE: This section may be more useful as a function.
+        // @TODO verify mathy things
+        
         // The file will use at least file_size / block_size_actual number of blocks.  Because this
         // uses integer division, the decimal is cut off, hence we use modulus to determine if the
         // block count needs to be expanded by one to compensate.
-        u32 num_blocks = (file_size % block_size_actual ?
-                          file_size / block_size_actual + 1 :
-                          file_size / block_size_actual);
+        u32 raw_num_blocks_needed = (file_size % block_size_actual ?
+                                     file_size / block_size_actual + 1 :
+                                     file_size / block_size_actual);
+        
+        // Housekeeping variables to help keep calculations from being as stupidly long.
+        u32 s_num_block_pointers = block_size_actual / EXT2_BLOCK_POINTER_SIZE;
+        u32 d_num_block_pointers = s_num_block_pointers * s_num_block_pointers;
+        
+        // Establish a counter for the total number of blocks that will be needed when all support
+        // structures, such as indirect blocks, are taken into account.
+        u32 total_num_blocks_needed = raw_num_blocks_needed;
+        
+        // Check to see if the singly indirect block will be needed.
+        if (raw_num_blocks_needed > EXT2_INODE_NBLOCKS_DIR)
+        {
+            // Add 1 for the singly indirect block.
+            total_num_blocks_needed += 1;
+            
+            // Keep track of how many more blocks are needed at each stage.  At this stage,
+            // compensate for the number of direct block pointers.
+            u32 num_blocks_left = raw_num_blocks_needed - EXT2_INODE_NBLOCKS_DIR;
+            
+            // Check to see if the doubly indirect block will be needed.
+            if (raw_num_blocks_needed > EXT2_INODE_NBLOCKS_DIR + s_num_block_pointers)
+            {
+                // Add 1 for the doubly indirect block.
+                total_num_blocks_needed += 1;
+                
+                // Keep track of how many more blocks are needed at each stage.  At this stage,
+                // compensate for the number of block pointers contained in the singly indirect
+                // block.
+                num_blocks_left -= s_num_block_pointers;
+                
+                // Calculate the number of singly indirect blocks still needed, compensating for
+                // integer division.
+                u32 num_s_blocks_left = (num_blocks_left % s_num_block_pointers ?
+                                         num_blocks_left / s_num_block_pointers + 1 :
+                                         num_blocks_left / s_num_block_pointers);
+                
+                // Whether or not a triply indirect block is needed, this number of singly indirect
+                // blocks will be, so add the number of singly indirect blocks left to the total.
+                total_num_blocks_needed += num_s_blocks_left;
+                
+                // Check to see if the triply indirect block will be needed.
+                if (raw_num_blocks_needed > EXT2_INODE_NBLOCKS_DIR + s_num_block_pointers + 
+                                            d_num_block_pointers)
+                {
+                    // Add 1 for the triply indirect block.
+                    total_num_blocks_needed += 1;
+                    
+                    // Keep track of how many more blocks are needed at each stage.  At this stage,
+                    // compensate for the number of block pointers contained in the doubly indirect
+                    // block.
+                    num_blocks_left -= d_num_block_pointers;
+                    
+                    // Calculate the number of doubly indirect blocks still needed, compensating for
+                    // integer division.
+                    u32 num_d_blocks_left = (num_blocks_left % d_num_block_pointers ?
+                                             num_blocks_left / d_num_block_pointers + 1 :
+                                             num_blocks_left / d_num_block_pointers);
+                    
+                    // Add the number of doubly indirect blocks needed to the total.
+                    total_num_blocks_needed += num_d_blocks_left;
+                }
+            }
+        }
+        
+        // @TODO check to see if the directory inode will need another block to handle the added
+        //       ext2_dir_entry structure.
         /***   End determine how many blocks the file will take up.   ***/
         
         
-        /***   Read block bitmap and determine free blocks.   ***/
-        // make function to handle this?
-        /***   End read block bitmap and determine free blocks.   ***/
+        /***   Count number of free blocks and inodes.   ***/
+        u32 total_free_blocks = 0;
+        u32 total_free_inodes = 0;
+        
+        // Run through the block group descriptor table and add up the number of free blocks and
+        // inodes.
+        for (u32 i = 0; i < numBlockGroups; i++)
+        {
+            total_free_blocks += bgdTable[i].bg_free_blocks_count;
+            total_free_inodes += bgdTable[i].bg_free_inodes_count;
+        }
+        /***   End count number of free blocks and inodes.   ***/
+        
+        
+        /***   Verify that enough free space exists.   ***/
+        // Check the number of free blocks.
+        if (total_free_blocks < total_num_blocks_needed)
+        {
+            cout << "Error: Not enough free blocks available on the file system.\n";
+            throw;
+        }
+        
+        // Check the number of free inodes.
+        if (total_free_inodes < 1)
+        {
+            cout << "Error: Not enough free inodes available on the file system.\n";
+            throw;
+        }
+        /***   End verify that enough free space exists.   ***/
         
         
         /***   START CODE TO BE MODIFIED   ***/
@@ -1065,7 +1167,7 @@ namespace vdi_explorer
     }
     
     
-    void ext2::print_block(u32 block_to_dump, bool text = true)
+    void ext2::print_block(u32 block_to_dump, bool text)
     {
         u8 * raw_block = new u8[EXT2_BLOCK_BASE_SIZE << superBlock.s_log_block_size];
         

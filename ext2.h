@@ -264,7 +264,7 @@ namespace vdi_explorer
             void print_superblock();
             void print_bootsector();
             void print_bgd_table();
-            void print_block(u32, bool);
+            void print_block(u32, bool = true);
     };
 }
 
