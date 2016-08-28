@@ -284,6 +284,8 @@ namespace vdi_explorer
             
             // Unroll the block chain where the file resides.
             list<u32> file_block_list = make_block_list(file_inode);
+            cout << "debug (ext2::file_read) number of blocks: " << file_block_list.size() << endl;
+            cin.ignore(1);
             
             // Set up an iterator to go through the block list.
             list<u32>::iterator iter = file_block_list.begin();
@@ -347,6 +349,7 @@ namespace vdi_explorer
         //   no:
         //     (tasks to complete, not sure of exact order yet)
         //     [x] determine input file size
+        //     [ ] make sure the file is under the max size
         //     [ ] determine how many blocks the file is going to take including supporting
         //         structures, such as inode and indirect blocks, and check directory inode to make
         //         sure it can handle another ext2_dir_entry (or if it needs another block to handle
@@ -355,7 +358,8 @@ namespace vdi_explorer
         //               does the number of free inodes go down when blocks are written to?
         //     [x] count number of free blocks and inodes
         //     [ ] verify that there are enough free blocks
-        //     [ ] make a list of free blocks that we plan on using
+        //     [ ] make a list of free blocks that we plan on using (try to use the ones that are in
+        //         the same block group as the parent directly)
         //     [ ] write incoming file to disk
         //     [ ] record blocks in indirect block structures if necessary
         //     [ ] build and write inode entry (don't forget about permissions!)
@@ -463,6 +467,7 @@ namespace vdi_explorer
         
         // @TODO check to see if the directory inode will need another block to handle the added
         //       ext2_dir_entry structure.
+        
         /***   End determine how many blocks the file will take up.   ***/
         
         

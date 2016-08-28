@@ -25,6 +25,7 @@ namespace utility
     // trim from both ends (copying)
     string trimmed(string);
     
+    
     // tokenize a string based on a given delimiter
     vector<string> tokenize(const string &, const string &);
 }

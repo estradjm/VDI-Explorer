@@ -47,10 +47,19 @@ namespace utility
         return s;
     }
     
-    // tokenize a string based on a given delimiter
-    // to_tokenize should be an already-trimmed string for best results
-    // @TODO add quote handling capability
-    // @TODO add escape character ('\') handling
+    
+    /*----------------------------------------------------------------------------------------------
+     * Name:    tokenize
+     * Type:    Function
+     * Purpose: Tokenize a string based on a given delimiter.
+     * Input:   const string & to_tokenize, contains the string that will be tokenized.  Should be
+     *          an already-trimmed string for best results.
+     * Input:   const string & delimiter, contains the string to use as the delimiter.
+     * Output:  vector<string>, containing the tokens that the string was broken up into.
+     *
+     * @TODO    add quote handling capability
+     * @TODO    add escape character ('\') handling
+    ----------------------------------------------------------------------------------------------*/
     vector<string> tokenize(const string & to_tokenize, const string & delimiter)
     {
         vector<string> to_return;
@@ -58,30 +67,30 @@ namespace utility
         size_t pos_found = 0;
         string temp;
         
-        // loop through the string
+        // Loop through the string.
         while (cursor < to_tokenize.length())
         {
-            // attempt to find the delimiter
+            // Attempt to find the delimiter.
             pos_found = to_tokenize.find(delimiter, cursor);
             
-            // pull out a token
+            // Pull out a token.
             temp.assign(to_tokenize.substr(cursor, pos_found - cursor));
 
-            // adjust the cursor position
+            // Adjust the cursor position.
             cursor += temp.length() + delimiter.length();
 
-            // check the token to be sure it is one
+            // Check the token to be sure it is one.
             if (temp == delimiter || temp.length() == 0)
             {
-                // if not, continue
+                // If not, discard it and continue.
                 continue;
             }
             
-            // add the token to the list of tokens
+            // Otherwise, add the token to the list of tokens.
             to_return.push_back(temp);
         }
         
-        // return the tokens
+        // Return the tokens.
         return to_return;
     }
 } // namespace utility
