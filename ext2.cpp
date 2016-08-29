@@ -357,36 +357,37 @@ namespace vdi_explorer
     bool ext2::file_write(fstream & input_file, string filename_to_write, const u32 dir_inode_num)
     {
         // General algorithm:
-        // Check if file already exists in the vfs
-        //   no:
-        //     (tasks to complete, not sure of exact order yet)
-        //     [x] verify inode is valid
-        //     [x] determine input file size
-        //     [x] make sure the file is under the max size
-        //     [x] truncate filename_to_write if needed (max size is EXT2_FILENAME_MAX_LENGTH)
-        //     [x] determine how many blocks the file is going to take including supporting
-        //         structures, such as inode and indirect blocks, and check directory inode to make
-        //         sure it can handle another ext2_dir_entry (or if it needs another block to handle
-        //         it)
-        //         @TODO find out if free inode count and free block count are synchronized, that is
-        //               does the number of free inodes go down when blocks are written to?
-        //     [x] verify that there are enough free blocks
-        //     [x] make a list of free blocks that we plan on using (try to use the ones that are in
-        //         the same block group as the parent directly)
-        //     [x] write incoming file to disk
-        //     [ ] record blocks in indirect block structures if necessary
-        //     [ ] find free inode
-        //     [ ] build and write inode entry (don't forget about permissions!) (inode table?)
-        //     [ ] add ext2_dir_entry to directory block
-        //     [ ] modify block bitmap on disk
-        //     [ ] modify inode bitmap
-        //     [ ] modify block group descriptor table in memory
-        //     [ ] modify block group descriptor table on disk
-        //     [ ] modify superblock in memory
-        //     [ ] modify superblock on disk
+        //   (tasks to complete, not sure of exact order yet)
+        //   [ ] check if file already exists
+        //   [x] verify inode is valid
+        //   [x] determine input file size
+        //   [x] make sure the file is under the max size
+        //   [x] truncate filename_to_write if needed (max size is EXT2_FILENAME_MAX_LENGTH)
+        //   [x] determine how many blocks the file is going to take including supporting
+        //       structures, such as inode and indirect blocks, and check directory inode to make
+        //       sure it can handle another ext2_dir_entry (or if it needs another block to handle
+        //       it)
+        //   [x] verify that there are enough free blocks
+        //   [x] make a list of free blocks that we plan on using (try to use the ones that are in
+        //       the same block group as the parent directly)
+        //   [x] write incoming file to disk
+        //   [ ] record blocks in indirect block structures if necessary
+        //   [ ] find free inode
+        //   [ ] build and write inode entry (don't forget about permissions!) (inode table?)
+        //   [ ] add ext2_dir_entry to directory block
+        //   [ ] modify block bitmap on disk
+        //   [ ] modify inode bitmap
+        //   [ ] modify block group descriptor table in memory
+        //   [ ] modify block group descriptor table on disk
+        //   [ ] modify superblock in memory
+        //   [ ] modify superblock on disk
         //
-        //     Double-check the filesystem documentation to make damn sure we don't overwrite or
-        //     miss something critical.
+        //   Double-check the filesystem documentation to make damn sure we don't overwrite or
+        //   miss something critical.
+        
+        
+        /***   Check to see if the file already exists.   ***/
+        /***   End check to see if the file already exists.   ***/
         
         
         /***   Verify inode is valid.   ***/
@@ -587,7 +588,7 @@ namespace vdi_explorer
         // Housekeeping variable to establish the bitmap index where the real data blocks begin.
         u64 starting_data_block_offset = 1 + // 1 for the block usage bitmap
                                          1 + // 1 for the inode usage bitmap
-                                         (superblock.s_inodes_per_group * superblock.s_inode_size) / block_size_actual
+                                         (superblock.s_inodes_per_group * superblock.s_inode_size) / block_size_actual;
         
         // Check if the block group has enough free blocks to hold the file or if it will have to
         // be written across multiple block groups.
@@ -665,21 +666,27 @@ namespace vdi_explorer
         // HA HA HA HA
         for (u32 i = 0; i < blocks_to_write.size() - supporting_blocks_needed; i++)
         {
-            // Determine how many bytes are going to be read from the input file and written to the
-            // file system.
-            size_t bytes_to_write = (file_size - bytes_written > block_size_actual ?
-                                     block_size_actual :
-                                     file_size - bytes_written);
-            
-            // Read some number of bytes from the input file into the input file buffer.
+            // Attempt to read a block's worth of bytes from the input file into the input file
+            // buffer.  If there aren't a block's worth of bytes left to read, no error occurs and
+            // the file buffer will only be partially full.
             input_file.read(input_file_buffer, block_size_actual);
+            
+            // If the number of bytes to be written is not a full block's worth, ensure the
+            // remainder of the buffer is zeroed out.
+            if (file_size - bytes_written < block_size_actual)
+            {
+                // @TODO Verify that numbers do not suffer from an off-by-1 error.
+                memset(&(input_file_buffer[file_size - bytes_written]),
+                       0,
+                       block_size_actual - (file_size - bytes_written));
+            }
             
             // Write the contents of the buffer to the file system.
             vdi->vdiSeek(blockToOffset(blocks_to_write[i]), SEEK_SET);
-            vdi->vdiWrite(input_file_buffer, bytes_to_write);
+            vdi->vdiWrite(input_file_buffer, block_size_actual);
             
             // Update the number of bytes written.
-            bytes_written += bytes_to_write;
+            bytes_written += block_size_actual;
         }
         
         // Deallocate the input file buffer.
@@ -688,11 +695,13 @@ namespace vdi_explorer
         
         
         /***   Record indirect blocks.   ***/
+        // @TODO This NEEDS to be its own function, it's too complicated.
+        
         // Reset the number of bytes written.
         bytes_written = 0;
         
-        // Set the number of bytes to write to the size of a block pointer in bytes (4)
-        bytes_to_write = EXT2_BLOCK_POINTER_SIZE;
+        // // Set the number of bytes to write to the size of a block pointer in bytes (4)
+        // bytes_to_write = EXT2_BLOCK_POINTER_SIZE; // not needed?
         
         // Establish a variable to keep track of the blocks_to_write index where we are currently
         // pulling from.
@@ -701,106 +710,72 @@ namespace vdi_explorer
         // Establish a variable to keep track of the indirect block location.
         u32 indirect_block_index = blocks_to_write.size() - supporting_blocks_needed; // off by 1?
         
-        // Write singly indirect block.
+        // Check if there is a need to write the singly indirect block.
         if (blocks_to_write.size() > EXT2_INODE_NBLOCKS_DIR)
         {
+            // new method: write all the singly indirect blocks needed at once, then parse them up
+            // into doubly / triply indirect blocks.
+            
+            // Determine the total number of singly indirect blocks that will need to be written.
+            u32 num_s_blocks_to_write = ((blocks_to_write.size() - EXT2_INODE_NBLOCKS_DIR) % s_num_block_pointers ?
+                                         (blocks_to_write.size() - EXT2_INODE_NBLOCKS_DIR) / s_num_block_pointers + 1 :
+                                         (blocks_to_write.size() - EXT2_INODE_NBLOCKS_DIR));
+            
+            // 
+            for (u32 i = 0; i < num_s_blocks_to_write; i++)
+            {
+                // Write a block at a time.
+                // Determine block size or . (block_size_actual or remainder size of the )
+            }
+            
             // Determine whether to write a full block's worth of block pointers or just enough to
             // cover the file size.
-            bytes_to_write = (blocks_to_write.size() > EXT2_INODE_NBLOCKS_DIR + s_num_block_pointers ?
-                              s_num_block_pointers :
-                              blocks_to_write.size() - EXT2_INODE_NBLOCKS_DIR);
-            bytes_to_write *= EXT2_BLOCK_POINTER_SIZE;
+            // bytes_to_write = (blocks_to_write.size() > EXT2_INODE_NBLOCKS_DIR + s_num_block_pointers ?
+            //                   s_num_block_pointers :
+            //                   blocks_to_write.size() - EXT2_INODE_NBLOCKS_DIR);
+            // bytes_to_write *= EXT2_BLOCK_POINTER_SIZE;
             
-            // Seek to the indirect block that will be receiving the block pointers.
-            vdi->vdiSeek(blockToOffset(blocks_to_write[indirect_block_index]), SEEK_SET);
+            // // Seek to the indirect block that will be receiving the block pointers.
+            // vdi->vdiSeek(blockToOffset(blocks_to_write[indirect_block_index]), SEEK_SET);
             
-            // Directly access the data of the vector to write the block pointers in one go instead
-            // of having a loop.
-            vdi->vdiWrite(&(blocks_to_write.data()[block_index]), bytes_to_write);
+            // // Directly access the data of the vector to write the block pointers in one go instead
+            // // of having a loop.
+            // vdi->vdiWrite(&(blocks_to_write.data()[block_index]), bytes_to_write); // cast data() to u8?
             
-            // Update the indices.
-            indirect_block_index += 1;
-            block_index += bytes_to_write / EXT2_BLOCK_POINTER_SIZE;
+            // // Update the indices.
+            // indirect_block_index += 1;
+            // block_index += bytes_to_write / EXT2_BLOCK_POINTER_SIZE;
             
-            // doubly indirect goes here
-            if (false /*something*/)
-            {
-                // write doubly indirect block
-                /*stuff*/
+            // // Check if there is a need to write the doubly indirect block.
+            // if (blocks_to_write.size() > EXT2_INODE_NBLOCKS_DIR + s_num_block_pointers)
+            // {
+            //     // Establish a variable to keep track of the number of singly indirect blocks
+            //     // written.
+            //     vector<u32> si_blocks_written;
                 
-                // triply indirect goes here
-                if (false /*more something*/)
-                {
-                    // write triply indirect block
-                    /*more stuff*/
-                }
-            }
+            //     // loop and write as many singly indirect blocks as needed, up to block_size_actual/EXT2_BLOCK_POINTER_SIZE
+            //     for (u32 i = 0; i < s_num_block_pointers && )
+                
+            //     // Determine whether to write a full block's worth of block pointers or just enough
+            //     // to cover the file size.
+            //     bytes_to_write = (blocks_to_write.size() > EXT2_INODE_NBLOCKS_DIR + s_num_block_pointers + d_num_block_pointers ?
+            //                       s_num_block_pointers :
+            //                       blocks_to_write.size() - EXT2_INODE_NBLOCKS_DIR);
+            //     bytes_to_write *= EXT2_BLOCK_POINTER_SIZE;
+                
+            //     /*stuff*/
+                
+            //     // triply indirect goes here
+            //     if (false /*more something*/)
+            //     {
+            //         // write triply indirect block
+            //         /*more stuff*/
+            //     }
+            // }
             
         }
         /***   End record indirect blocks.   ***/
         
-        
-        
-        /***   START CODE TO BE MODIFIED   ***/
-        // // Check if the file specified in filename_to_write exists or not, and if it does, its inode
-        // // number will be stored in file_inode.
-        // u32 file_inode = 0;
-        // if (file_entry_exists(filename_to_write, file_inode) == false)
-        // {
-        //     cout << "debug >> ext2::file_write >> file does not exist\n";
-            
-        //     // Get the file size.
-        //     size_t file_size = readInode(file_inode).i_size;
-            
-        //     // Unroll the block chain where the file resides.
-        //     // @TODO Code this function.
-        //     list<u32> file_block_list = make_block_list(file_inode);
-            
-        //     // Set up an iterator to go through the block list.
-        //     list<u32>::iterator iter = file_block_list.begin();
-            
-        //     // Set up some housekeeping variables.
-        //     size_t bytes_read = 0;
-        //     size_t bytes_to_read = 0;
-            
-        //     // Buffer to receive the file contents. Must be char (versus u8) or compiler pukes.
-        //     char * read_buffer = new char[block_size_actual];
-
-        //     // Loop until the whole file has been read.
-        //     // @TODO determine if a (iter != file_block_list.end()) condition should be added.
-        //     while (bytes_read < file_size)
-        //     {
-        //         // Determine how many bytes to read.  Read a full block if possible, otherwise read
-        //         // just until the end of the file.
-        //         bytes_to_read = (block_size_actual < file_size - bytes_read ? block_size_actual : file_size - bytes_read);
-                
-        //         // Set the VDI seek pointer to the apropriate position and then read the designated
-        //         // number of bytes.
-        //         vdi->vdiSeek(blockToOffset(*iter), SEEK_SET);
-        //         vdi->vdiRead(read_buffer, bytes_to_read);
-                
-        //         // Immediately write the buffer to file.
-        //         output_file.write(read_buffer, bytes_to_read);
-        //         //output_file.
-                
-        //         // Get set up to do the next read by setting the iterated to the next block in the
-        //         // chain and incrementing the number of bytes that have been read.
-        //         iter++;
-        //         bytes_read += bytes_to_read;
-        //     }
-            
-        //     // Release the read buffer's memory and return.
-        //     delete[] read_buffer;
-        //     return true;
-        // }
-        // else
-        // {
-        //     cout << "debug >> ext2::file_write >> file already exists\n";
-        //     // The file does not exist, so return false.
-        //     return false;
-        // }
-        
-        /***   END CODE TO BE MODIFIED   ***/
         return false; // temp to appease the compiler gods
     }
 

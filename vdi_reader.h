@@ -26,10 +26,10 @@ namespace vdi_explorer{
             off_t vdiSeek(off_t offset, int anchor);
             
             // Reads count bytes from the file, placing them in the specified buffer.
-            size_t vdiRead(void *buf, size_t count);
+            size_t vdiRead(void * buf, size_t count);
             
             // Writes count bytes to the file from the buffer.
-            size_t vdiWrite(const void *buf, size_t count);
+            size_t vdiWrite(const void * buf, size_t count);
             
         private:
             struct __attribute__((packed)) VDIHeader {
