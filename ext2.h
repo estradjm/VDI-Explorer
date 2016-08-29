@@ -45,7 +45,7 @@ namespace vdi_explorer
             string get_pwd();
             void set_pwd(const string &);
             bool file_read(fstream &, const string &);
-            bool file_write(fstream &, const string &);
+            bool file_write(fstream &, string, const u32);
             
             // Public debug functions.
             void debug_dump_pwd_inode();
@@ -230,14 +230,15 @@ namespace vdi_explorer
             };
             
             BootSector bootSector;
-            ext2_superblock superBlock;
+            ext2_superblock superblock;
             vdi_reader * vdi = nullptr;
             
-            u32 numBlockGroups;
+            u32 numBlockGroups = 0;
             
-            u32 block_size_actual = EXT2_BLOCK_BASE_SIZE;
+            size_t block_size_actual = EXT2_BLOCK_BASE_SIZE;
+            size_t max_file_size = EXT2_MAX_ABS_FILE_SIZE;
             
-            ext2_block_group_desc *bgdTable = nullptr;
+            ext2_block_group_desc * bgdTable = nullptr;
             
             // a list of directories in order to keep track of the hierarchy
             // list<ext2_dir_entry> pwd;
@@ -251,12 +252,22 @@ namespace vdi_explorer
             vector<ext2_dir_entry> parse_directory_inode(ext2_inode);
             vector<ext2_dir_entry> parse_directory_inode(u32);
             ext2_inode readInode(u32 inode);
+            // u32 bgd_starting_data_block(const u32);
             
             // @TODO convert to using commented prototype and function
             // bool dir_entry_exists(const string &, vector<ext2_dir_entry> &);
             vector<ext2_dir_entry> dir_entry_exists(const string &);
             bool file_entry_exists(const string &, u32 &);
+            
+            // Unroll a file inode into an ordered list of blocks containing the file's data.
             list<u32> make_block_list(const u32);
+            
+            // Create an ext2_dir_entry structure.
+            ext2_dir_entry make_dir_entry(const u32, const string &, const u8);
+            
+            // Read and write bitmaps.
+            vector<bool> read_bitmap(const u32);
+            void write_bitmap(const vector<bool> &);
             
             // Debug functions.
             void print_inode(ext2_inode *);

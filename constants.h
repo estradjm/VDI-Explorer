@@ -26,6 +26,8 @@ const unsigned int EXT2_BLOCK_BASE_SIZE = 1024; // The base block size is 1024 b
 const unsigned int EXT2_FRAG_BASE_SIZE = 1024; // The base fragment size is 1024 bytes.
 
 const int EXT2_BLOCK_POINTER_SIZE = 4; // The size of a block pointer in bytes.
+const unsigned long long int EXT2_MAX_ABS_FILE_SIZE = 2199023255040; // (2^32-1)*512 => The absolute maximum file size allowed by the ext2 file system. (2 TiB)
+const int EXT2_FILENAME_MAX_LENGTH = 255; // The max number of characters allowed in a filename in the ext2 file system.
 
 const int EXT2_INODE_NBLOCKS_DIR = 12; // The number of direct block pointers in an inode.
 const int EXT2_INODE_BLOCK_S_IND = EXT2_INODE_NBLOCKS_DIR; // Array location of the singly indirect block pointer in an inode.
@@ -66,7 +68,7 @@ const int EXT2_INODE_FLAGS_HASH_INDEX_DIR = 0x00010000;
 const int EXT2_INODE_FLAGS_AFS_DIR = 0x00020000;
 const int EXT2_INODE_FLAGS_JOURNAL_FILE_DATA = 0x0004000;
 
-const int EXT2_DIR_BASE_SIZE = 8;
+const int EXT2_DIR_BASE_SIZE = 8; // The base size of an ext2_dir_entry structure.
 
 const int EXT2_DIR_TYPE_UNKNOWN = 0;
 const int EXT2_DIR_TYPE_FILE = 1;

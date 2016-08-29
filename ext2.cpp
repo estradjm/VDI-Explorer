@@ -59,10 +59,20 @@ namespace vdi_explorer
         // Read the superblock.
         vdi->vdiSeek(bootSector.partitionTable[0].firstSector * VDI_SECTOR_SIZE +
                      EXT2_SUPERBLOCK_OFFSET, SEEK_SET);
-        vdi->vdiRead(&superBlock, sizeof(ext2_superblock));
+        vdi->vdiRead(&superblock, sizeof(ext2_superblock));
         
         // Record the actual block size.
-        block_size_actual = EXT2_BLOCK_BASE_SIZE << superBlock.s_log_block_size;
+        block_size_actual = EXT2_BLOCK_BASE_SIZE << superblock.s_log_block_size;
+        
+        // Calculate the max allowable file size.
+        u16 dwords_per_block = block_size_actual / 4;
+        u64 max_file_size_by_block = (dwords_per_block * dwords_per_block * dwords_per_block +
+                                      dwords_per_block * dwords_per_block +
+                                      dwords_per_block +
+                                      EXT2_INODE_NBLOCKS_DIR) *
+                                      block_size_actual;
+        if (max_file_size_by_block < EXT2_MAX_ABS_FILE_SIZE)
+            max_file_size = max_file_size_by_block;
         
         // Debug info.
         print_superblock();
@@ -70,8 +80,8 @@ namespace vdi_explorer
         
         // Calculate and verify the number of block groups in the partition.
         u32 nBlockGroupCalc1, nBlockGroupCalc2;
-        nBlockGroupCalc1 = (float)superBlock.s_blocks_count / superBlock.s_blocks_per_group + 0.5;
-        nBlockGroupCalc2 = (float)superBlock.s_inodes_count / superBlock.s_inodes_per_group + 0.5;
+        nBlockGroupCalc1 = (float)superblock.s_blocks_count / superblock.s_blocks_per_group + 0.5;
+        nBlockGroupCalc2 = (float)superblock.s_inodes_count / superblock.s_inodes_per_group + 0.5;
         if (nBlockGroupCalc1 != nBlockGroupCalc2)
         {
             cout << "Block group calculation mismatch.";
@@ -95,7 +105,7 @@ namespace vdi_explorer
         }
         
         // Determine where the start of the block group descriptor table is.
-        off_t bgdTableStart = superBlock.s_log_block_size == 0 ?
+        off_t bgdTableStart = superblock.s_log_block_size == 0 ?
                               blockToOffset(2) :
                               blockToOffset(1);
         
@@ -336,40 +346,56 @@ namespace vdi_explorer
     /*----------------------------------------------------------------------------------------------
      * Name:    file_write
      * Type:    Function
-     * Purpose: Writes a file from the host filesystem and into the virtual filesystem.
+     * Purpose: Writes a file from the host filesystem and into the filesystem being accessed by
+     *          this program.
      * Input:   fstream & input_file, contains the input file stream.
-     * Input:   const string & file_to_write, holds the name of the file to write to in the virtual
-     *          filesystem.
+     * Input:   string filename_to_write, holds the name of the file to write to in the filesystem.
+     * Input:   const u32 dir_inode_num, holds the inode number of the directory inode where the
+     *          file's information will be added.
      * Output:  bool, representing whether the file was written (true) or not (false).
     ----------------------------------------------------------------------------------------------*/
-    bool ext2::file_write(fstream & input_file, const string & file_to_write)
+    bool ext2::file_write(fstream & input_file, string filename_to_write, const u32 dir_inode_num)
     {
         // General algorithm:
         // Check if file already exists in the vfs
         //   no:
         //     (tasks to complete, not sure of exact order yet)
+        //     [x] verify inode is valid
         //     [x] determine input file size
-        //     [ ] make sure the file is under the max size
-        //     [ ] determine how many blocks the file is going to take including supporting
+        //     [x] make sure the file is under the max size
+        //     [x] truncate filename_to_write if needed (max size is EXT2_FILENAME_MAX_LENGTH)
+        //     [x] determine how many blocks the file is going to take including supporting
         //         structures, such as inode and indirect blocks, and check directory inode to make
         //         sure it can handle another ext2_dir_entry (or if it needs another block to handle
         //         it)
         //         @TODO find out if free inode count and free block count are synchronized, that is
         //               does the number of free inodes go down when blocks are written to?
-        //     [x] count number of free blocks and inodes
-        //     [ ] verify that there are enough free blocks
-        //     [ ] make a list of free blocks that we plan on using (try to use the ones that are in
+        //     [x] verify that there are enough free blocks
+        //     [x] make a list of free blocks that we plan on using (try to use the ones that are in
         //         the same block group as the parent directly)
-        //     [ ] write incoming file to disk
+        //     [x] write incoming file to disk
         //     [ ] record blocks in indirect block structures if necessary
-        //     [ ] build and write inode entry (don't forget about permissions!)
-        //     [ ] add ext2_dir_entry to directory inode
-        //     [ ] modify block bitmap
+        //     [ ] find free inode
+        //     [ ] build and write inode entry (don't forget about permissions!) (inode table?)
+        //     [ ] add ext2_dir_entry to directory block
+        //     [ ] modify block bitmap on disk
+        //     [ ] modify inode bitmap
         //     [ ] modify block group descriptor table in memory
         //     [ ] modify block group descriptor table on disk
+        //     [ ] modify superblock in memory
+        //     [ ] modify superblock on disk
         //
         //     Double-check the filesystem documentation to make damn sure we don't overwrite or
         //     miss something critical.
+        
+        
+        /***   Verify inode is valid.   ***/
+        if (dir_inode_num > superblock.s_inodes_count || dir_inode_num < superblock.s_first_ino)
+        {
+            cout << "Error: Invalid inode number. (ext2::file_write)\n";
+            throw;
+        }
+        /***   End verify inode is valid.   ***/
         
         
         /***   Determine file size.   ***/
@@ -387,17 +413,37 @@ namespace vdi_explorer
         input_file.seekg(0, std::ios::beg);
         
         // Convert the stream size into file size.
-        size_t file_size = (u32)stream_size;
+        size_t file_size = (u64)stream_size;
         /***   End determine file size.   ***/
+        
+        
+        /***   Ensure the file is under the max size.   ***/
+        if (file_size > max_file_size)
+        {
+            cout << "Error: File is too large to be handled by the file system. (ext2::file_write)\n";
+            return false;
+        }
+        /***   End ensure the file is under the max size.   ***/
+        
+        
+        /***   Truncate filename_to_write to EXT2_FILENAME_MAX_LENGTH bytes if needed.   ***/
+        if (filename_to_write.length() > EXT2_FILENAME_MAX_LENGTH)
+        {
+            cout << "Warning: File name is too long.  Truncating to " << EXT2_FILENAME_MAX_LENGTH <<
+                    " characters.\n";
+            filename_to_write.erase(EXT2_FILENAME_MAX_LENGTH);
+        }
+        /***   End truncate filename_to_write to EXT2_FILENAME_MAX_LENGTH bytes if needed.   ***/
         
         
         /***   Determine how many blocks the file will take up.   ***/
         // NOTE: This section may be more useful as a function.
         // @TODO verify mathy things
+        // @TODO optimize, maybe even rework the whole algorithm
         
         // The file will use at least file_size / block_size_actual number of blocks.  Because this
         // uses integer division, the decimal is cut off, hence we use modulus to determine if the
-        // block count needs to be expanded by one to compensate.
+        // block count needs to be expanded by one to compensate. A.k.a poor man's ceiling function.
         u32 raw_num_blocks_needed = (file_size % block_size_actual ?
                                      file_size / block_size_actual + 1 :
                                      file_size / block_size_actual);
@@ -410,11 +456,15 @@ namespace vdi_explorer
         // structures, such as indirect blocks, are taken into account.
         u32 total_num_blocks_needed = raw_num_blocks_needed;
         
+        // Establish a counter for the number supporting blocks needed (indirect blocks, etc.)
+        u32 supporting_blocks_needed = 0;
+        
         // Check to see if the singly indirect block will be needed.
         if (raw_num_blocks_needed > EXT2_INODE_NBLOCKS_DIR)
         {
             // Add 1 for the singly indirect block.
             total_num_blocks_needed += 1;
+            supporting_blocks_needed += 1;
             
             // Keep track of how many more blocks are needed at each stage.  At this stage,
             // compensate for the number of direct block pointers.
@@ -425,6 +475,7 @@ namespace vdi_explorer
             {
                 // Add 1 for the doubly indirect block.
                 total_num_blocks_needed += 1;
+                supporting_blocks_needed += 1;
                 
                 // Keep track of how many more blocks are needed at each stage.  At this stage,
                 // compensate for the number of block pointers contained in the singly indirect
@@ -440,6 +491,7 @@ namespace vdi_explorer
                 // Whether or not a triply indirect block is needed, this number of singly indirect
                 // blocks will be, so add the number of singly indirect blocks left to the total.
                 total_num_blocks_needed += num_s_blocks_left;
+                supporting_blocks_needed += num_s_blocks_left;
                 
                 // Check to see if the triply indirect block will be needed.
                 if (raw_num_blocks_needed > EXT2_INODE_NBLOCKS_DIR + s_num_block_pointers + 
@@ -447,6 +499,7 @@ namespace vdi_explorer
                 {
                     // Add 1 for the triply indirect block.
                     total_num_blocks_needed += 1;
+                    supporting_blocks_needed += 1;
                     
                     // Keep track of how many more blocks are needed at each stage.  At this stage,
                     // compensate for the number of block pointers contained in the doubly indirect
@@ -461,40 +514,44 @@ namespace vdi_explorer
                     
                     // Add the number of doubly indirect blocks needed to the total.
                     total_num_blocks_needed += num_d_blocks_left;
+                    supporting_blocks_needed += num_d_blocks_left;
                 }
             }
         }
         
-        // @TODO check to see if the directory inode will need another block to handle the added
-        //       ext2_dir_entry structure.
+        // Check to see if the directory inode will need another block to handle the added
+        // ext2_dir_entry structure.
+        // Parse the directory inode where the file will live.
+        vector<ext2::ext2_dir_entry> directory_entries = parse_directory_inode(dir_inode_num);
         
-        /***   End determine how many blocks the file will take up.   ***/
+        // Calculate the number of bytes left in the directory block.
+        size_t dir_block_space_left = directory_entries.back().rec_len - 
+                                      (EXT2_BLOCK_BASE_SIZE + directory_entries.back().name_len) % 4;
         
+        // Calculate the number of bytes needed to store an ext2_dir_entry structure for the file.
+        size_t dir_block_space_needed = EXT2_BLOCK_BASE_SIZE + filename_to_write.length();
+        dir_block_space_needed += dir_block_space_needed % 4;
         
-        /***   Count number of free blocks and inodes.   ***/
-        u32 total_free_blocks = 0;
-        u32 total_free_inodes = 0;
-        
-        // Run through the block group descriptor table and add up the number of free blocks and
-        // inodes.
-        for (u32 i = 0; i < numBlockGroups; i++)
+        // If the number of bytes needed exceeds those available, add 1 to the total number of
+        // needed blocks to account for the extra block needed for the directory entry.
+        if (dir_block_space_needed > dir_block_space_left)
         {
-            total_free_blocks += bgdTable[i].bg_free_blocks_count;
-            total_free_inodes += bgdTable[i].bg_free_inodes_count;
+            total_num_blocks_needed += 1;
+            supporting_blocks_needed += 1;
         }
-        /***   End count number of free blocks and inodes.   ***/
+        /***   End determine how many blocks the file will take up.   ***/
         
         
         /***   Verify that enough free space exists.   ***/
         // Check the number of free blocks.
-        if (total_free_blocks < total_num_blocks_needed)
+        if (superblock.s_free_blocks_count < total_num_blocks_needed)
         {
             cout << "Error: Not enough free blocks available on the file system.\n";
             throw;
         }
         
         // Check the number of free inodes.
-        if (total_free_inodes < 1)
+        if (superblock.s_free_inodes_count < 1)
         {
             cout << "Error: Not enough free inodes available on the file system.\n";
             throw;
@@ -502,11 +559,193 @@ namespace vdi_explorer
         /***   End verify that enough free space exists.   ***/
         
         
+        /***   Make a list of free blocks we plan on using.   ***/
+        // Implement functions specifically for reading / writing bitmaps?
+        // What about using vector<bool>?
+        //
+        // algorithm
+        //
+        // check whether file will fit into one block group
+        // yes:
+        //   read just that bdg bitmap
+        //   run through bitmap starting at index [2 + (superblock.s_inodes_per_group * superblock.s_inode_size) / block_size_actual]
+        //   add every free block up to the number of blocks we need.
+        // no:
+        //   read all bgd bitmaps
+        //   run through each bitmap starting at index starting at index [2 + (superblock.s_inodes_per_group * superblock.s_inode_size) / block_size_actual]
+        //   add every block from one block group before moving to the next one, up to the number of blocks we need (probably not good practice... fix at a later date)
+        
+        // Create a vector to hold the block numbers that will be written.
+        vector<u32> blocks_to_write;
+        
+        // Determine what block group the directory inode is in.
+        u32 dir_inode_block_group_num = inodeToBlockGroup(dir_inode_num);
+        
+        // @TODO Decide if this should simply be read in during object construction.
+        vector<vector<bool>> block_group_bitmaps; // vector-inception...
+        
+        // Housekeeping variable to establish the bitmap index where the real data blocks begin.
+        u64 starting_data_block_offset = 1 + // 1 for the block usage bitmap
+                                         1 + // 1 for the inode usage bitmap
+                                         (superblock.s_inodes_per_group * superblock.s_inode_size) / block_size_actual
+        
+        // Check if the block group has enough free blocks to hold the file or if it will have to
+        // be written across multiple block groups.
+        if (total_num_blocks_needed < bgdTable[dir_inode_block_group_num].bg_free_blocks_count)
+        {
+            // Only have to read the one bitmap.
+            block_group_bitmaps.push_back(read_bitmap(bgdTable[dir_inode_block_group_num].bg_block_bitmap));
+            
+            // Iterate through the block group's block bitmap.
+            for (u64 i = starting_data_block_offset; i < block_group_bitmaps.back().size(); i++)
+            {
+                // Check that the block is not in use.
+                if (block_group_bitmaps.back()[i] == false)
+                {
+                    // Mark the block as in use.
+                    block_group_bitmaps.back()[i] = true;
+                    
+                    // Add the block to the list of blocks to write.
+                    blocks_to_write.push_back(bgdTable[dir_inode_block_group_num].bg_block_bitmap + i);
+                }
+            }
+        }
+        else
+        {
+            // Need to read all bitmaps.
+            for (u32 i = 0; i < numBlockGroups; i++)
+            {
+                block_group_bitmaps.push_back(read_bitmap(bgdTable[i].bg_block_bitmap));
+            }
+            
+            // Iterate through all the block groups.
+            for (u32 i = 0; i < numBlockGroups; i++)
+            {
+                // Iterate through the block group's block bitmap.
+                for (u64 j = starting_data_block_offset; j < block_group_bitmaps[i].size(); j++)
+                {
+                    // Check that the block is not in use.
+                    if (block_group_bitmaps[i][j] == false)
+                    {
+                        // Mark the block as in use.
+                        block_group_bitmaps[i][j] = true;
+                        
+                        // Add the block to the list of blocks to write.
+                        blocks_to_write.push_back(bgdTable[i].bg_block_bitmap + i);
+                    }
+                }
+            }
+        }
+        /***   End make a list of free blocks we plan on using.   ***/
+        
+        
+        /***   Write file to disk.   ***/
+        // DUN DUN DUN - the crux of the function
+        //
+        // algorithm
+        //
+        // in each block, write block_size_actual bytes worth of data
+        
+        // Establish a variable to keep track of how many bytes have been written.
+        size_t bytes_written = 0;
+        
+        // Create a buffer for reading the input file.
+        s8 * input_file_buffer = nullptr;
+        input_file_buffer = new s8[block_size_actual];
+        if (input_file_buffer == nullptr)
+        {
+            cout << "Error: Could not allocate the file buffer. (ext2::file_write)\n";
+            throw;
+        }
+        
+        // Dashing through the loop
+        // In an integer vector
+        // O'er this we traverse
+        // Laughing all the way
+        // HA HA HA HA
+        for (u32 i = 0; i < blocks_to_write.size() - supporting_blocks_needed; i++)
+        {
+            // Determine how many bytes are going to be read from the input file and written to the
+            // file system.
+            size_t bytes_to_write = (file_size - bytes_written > block_size_actual ?
+                                     block_size_actual :
+                                     file_size - bytes_written);
+            
+            // Read some number of bytes from the input file into the input file buffer.
+            input_file.read(input_file_buffer, block_size_actual);
+            
+            // Write the contents of the buffer to the file system.
+            vdi->vdiSeek(blockToOffset(blocks_to_write[i]), SEEK_SET);
+            vdi->vdiWrite(input_file_buffer, bytes_to_write);
+            
+            // Update the number of bytes written.
+            bytes_written += bytes_to_write;
+        }
+        
+        // Deallocate the input file buffer.
+        delete[] input_file_buffer;
+        /***   End write file to disk.   ***/
+        
+        
+        /***   Record indirect blocks.   ***/
+        // Reset the number of bytes written.
+        bytes_written = 0;
+        
+        // Set the number of bytes to write to the size of a block pointer in bytes (4)
+        bytes_to_write = EXT2_BLOCK_POINTER_SIZE;
+        
+        // Establish a variable to keep track of the blocks_to_write index where we are currently
+        // pulling from.
+        u32 block_index = EXT2_INODE_NBLOCKS_DIR;
+        
+        // Establish a variable to keep track of the indirect block location.
+        u32 indirect_block_index = blocks_to_write.size() - supporting_blocks_needed; // off by 1?
+        
+        // Write singly indirect block.
+        if (blocks_to_write.size() > EXT2_INODE_NBLOCKS_DIR)
+        {
+            // Determine whether to write a full block's worth of block pointers or just enough to
+            // cover the file size.
+            bytes_to_write = (blocks_to_write.size() > EXT2_INODE_NBLOCKS_DIR + s_num_block_pointers ?
+                              s_num_block_pointers :
+                              blocks_to_write.size() - EXT2_INODE_NBLOCKS_DIR);
+            bytes_to_write *= EXT2_BLOCK_POINTER_SIZE;
+            
+            // Seek to the indirect block that will be receiving the block pointers.
+            vdi->vdiSeek(blockToOffset(blocks_to_write[indirect_block_index]), SEEK_SET);
+            
+            // Directly access the data of the vector to write the block pointers in one go instead
+            // of having a loop.
+            vdi->vdiWrite(&(blocks_to_write.data()[block_index]), bytes_to_write);
+            
+            // Update the indices.
+            indirect_block_index += 1;
+            block_index += bytes_to_write / EXT2_BLOCK_POINTER_SIZE;
+            
+            // doubly indirect goes here
+            if (false /*something*/)
+            {
+                // write doubly indirect block
+                /*stuff*/
+                
+                // triply indirect goes here
+                if (false /*more something*/)
+                {
+                    // write triply indirect block
+                    /*more stuff*/
+                }
+            }
+            
+        }
+        /***   End record indirect blocks.   ***/
+        
+        
+        
         /***   START CODE TO BE MODIFIED   ***/
-        // // Check if the file specified in file_to_write exists or not, and if it does, its inode
+        // // Check if the file specified in filename_to_write exists or not, and if it does, its inode
         // // number will be stored in file_inode.
         // u32 file_inode = 0;
-        // if (file_entry_exists(file_to_write, file_inode) == false)
+        // if (file_entry_exists(filename_to_write, file_inode) == false)
         // {
         //     cout << "debug >> ext2::file_write >> file does not exist\n";
             
@@ -577,7 +816,7 @@ namespace vdi_explorer
     u32 ext2::offsetToBlock(off_t offset)
     {
         return (offset - bootSector.partitionTable[0].firstSector * VDI_SECTOR_SIZE) / 
-               (EXT2_BLOCK_BASE_SIZE << superBlock.s_log_block_size);
+               (EXT2_BLOCK_BASE_SIZE << superblock.s_log_block_size);
     }
     
     
@@ -590,7 +829,7 @@ namespace vdi_explorer
     ----------------------------------------------------------------------------------------------*/
     u32 ext2::inodeToBlockGroup(u32 inode_number)
     {
-        return (inode_number - 1) / superBlock.s_inodes_per_group;
+        return (inode_number - 1) / superblock.s_inodes_per_group;
     }
     
     /*----------------------------------------------------------------------------------------------
@@ -602,7 +841,7 @@ namespace vdi_explorer
     ----------------------------------------------------------------------------------------------*/
     u32 ext2::inodeBlockGroupIndex(u32 inode_number)
     {
-        return (inode_number - 1) % superBlock.s_inodes_per_group;
+        return (inode_number - 1) % superblock.s_inodes_per_group;
     }
     
     /*----------------------------------------------------------------------------------------------
@@ -614,9 +853,9 @@ namespace vdi_explorer
     ----------------------------------------------------------------------------------------------*/
     off_t ext2::blockToOffset(u32 block_number)
     {
-        return block_number < superBlock.s_blocks_count ?
+        return block_number < superblock.s_blocks_count ?
                bootSector.partitionTable[0].firstSector * VDI_SECTOR_SIZE + 
-                  block_number * (EXT2_BLOCK_BASE_SIZE << superBlock.s_log_block_size) :
+                  block_number * (EXT2_BLOCK_BASE_SIZE << superblock.s_log_block_size) :
                -1;
     }
     
@@ -624,19 +863,18 @@ namespace vdi_explorer
     /*----------------------------------------------------------------------------------------------
      * Name:    inodeToOffset
      * Type:    Function
-     * Purpose: ...
-     * Input:   u32 inode_number, containing ...
-     * Output:  off_t....
+     * Purpose: Calculates the offset of an inode on the disk.
+     * Input:   u32 inode_num, containing the inode number to calculate the offset for.
+     * Output:  off_t, holding the offset of the inode on the disk.
     ----------------------------------------------------------------------------------------------*/
-    off_t ext2::inodeToOffset(u32 inode_number)
+    off_t ext2::inodeToOffset(u32 inode_num)
     {
-        u32 inodeBlockGroup = inodeToBlockGroup(inode_number);
-        u32 inodeIndex = inodeBlockGroupIndex(inode_number);
-        //u32 inodeContainingBlock = (inodeIndex * superBlock.s_inode_size) / (EXT2_BLOCK_BASE_SIZE << superBlock.s_log_block_size);
-        return
-            //bootSector.partitionTable[0].firstSector * VDI_SECTOR_SIZE +
-            blockToOffset(bgdTable[inodeBlockGroup].bg_inode_table) + inodeIndex * superBlock.s_inode_size;
-//        return 0;
+        u32 inode_block_group = inodeToBlockGroup(inode_num);
+        u32 inode_index = inodeBlockGroupIndex(inode_num);
+        
+        // Calculate and return.
+        return blockToOffset(bgdTable[inode_block_group].bg_inode_table) +
+               inode_index * superblock.s_inode_size;
     }
     
     
@@ -705,10 +943,10 @@ namespace vdi_explorer
      * Name:    print_dir_entry
      * Type:    Function
      * Purpose: Prints directory information.
-     * Input:   ext2_dir_entry* dir_entry, containing pointer to a directory object.
+     * Input:   ext2_dir_entry & dir_entry, containing pointer to a directory object.
      * Output:  Nothing.
     ----------------------------------------------------------------------------------------------*/
-    void ext2::print_dir_entry(ext2_dir_entry& dir_entry, bool verbose)
+    void ext2::print_dir_entry(ext2_dir_entry & dir_entry, bool verbose)
     {
         if (verbose)
         {
@@ -742,42 +980,42 @@ namespace vdi_explorer
     void ext2::print_superblock()
     {
         cout << "\nSuperblock Dump:\n";
-        cout << "Inodes count: " << superBlock.s_inodes_count << endl;
-        cout << "Blocks count: " << superBlock.s_blocks_count << endl;
-        cout << "Reserved blocks count: " << superBlock.s_r_blocks_count << endl;
-        cout << "Free blocks count: " << superBlock.s_free_blocks_count << endl;
-        cout << "Free inodes count: " << superBlock.s_free_inodes_count << endl;
-        cout << "First data block: " << superBlock.s_first_data_block << endl;
-        cout << "Block size: " << (EXT2_BLOCK_BASE_SIZE << superBlock.s_log_block_size) << endl;
-        cout << "Fragment size: " << (EXT2_FRAG_BASE_SIZE << superBlock.s_log_frag_size) << endl;
-        cout << "# blocks per group: " << superBlock.s_blocks_per_group << endl;
-        cout << "# fragments per group: " << superBlock.s_frags_per_group << endl;
-        cout << "# inodes per group: " << superBlock.s_inodes_per_group << endl;
-        cout << "Mount time: " << superBlock.s_mtime << endl;
-        cout << "Write time: " << superBlock.s_wtime << endl;
-        cout << "Mount count: " << superBlock.s_mnt_count << endl;
-        cout << "Maximal mount count: " << superBlock.s_max_mnt_count << endl;
-        cout << "Magic signature: " << hex << superBlock.s_magic << dec << endl;
-        cout << "File system state: " << superBlock.s_state << endl;
-        cout << "Error behaviour: " << superBlock.s_errors << endl;
-        cout << "Minor revision level: " << superBlock.s_minor_rev_level << endl;
-        cout << "Time of last check: " << superBlock.s_lastcheck << endl;
-        cout << "Check interval: " << superBlock.s_checkinterval << endl;
-        cout << "Creator OS: " << superBlock.s_creator_os << endl;
-        cout << "Revision level: " << superBlock.s_rev_level << endl;
-        cout << "Default reserved UID: " << superBlock.s_def_resuid << endl;
-        cout << "Default reserved GID: " << superBlock.s_def_resgid << endl;
+        cout << "Inodes count: " << superblock.s_inodes_count << endl;
+        cout << "Blocks count: " << superblock.s_blocks_count << endl;
+        cout << "Reserved blocks count: " << superblock.s_r_blocks_count << endl;
+        cout << "Free blocks count: " << superblock.s_free_blocks_count << endl;
+        cout << "Free inodes count: " << superblock.s_free_inodes_count << endl;
+        cout << "First data block: " << superblock.s_first_data_block << endl;
+        cout << "Block size: " << (EXT2_BLOCK_BASE_SIZE << superblock.s_log_block_size) << endl;
+        cout << "Fragment size: " << (EXT2_FRAG_BASE_SIZE << superblock.s_log_frag_size) << endl;
+        cout << "# blocks per group: " << superblock.s_blocks_per_group << endl;
+        cout << "# fragments per group: " << superblock.s_frags_per_group << endl;
+        cout << "# inodes per group: " << superblock.s_inodes_per_group << endl;
+        cout << "Mount time: " << superblock.s_mtime << endl;
+        cout << "Write time: " << superblock.s_wtime << endl;
+        cout << "Mount count: " << superblock.s_mnt_count << endl;
+        cout << "Maximal mount count: " << superblock.s_max_mnt_count << endl;
+        cout << "Magic signature: " << hex << superblock.s_magic << dec << endl;
+        cout << "File system state: " << superblock.s_state << endl;
+        cout << "Error behaviour: " << superblock.s_errors << endl;
+        cout << "Minor revision level: " << superblock.s_minor_rev_level << endl;
+        cout << "Time of last check: " << superblock.s_lastcheck << endl;
+        cout << "Check interval: " << superblock.s_checkinterval << endl;
+        cout << "Creator OS: " << superblock.s_creator_os << endl;
+        cout << "Revision level: " << superblock.s_rev_level << endl;
+        cout << "Default reserved UID: " << superblock.s_def_resuid << endl;
+        cout << "Default reserved GID: " << superblock.s_def_resgid << endl;
         
-        cout << "\nFirst non-reserved inode: " << superBlock.s_first_ino << endl;
-        cout << "inode structure size: " << superBlock.s_inode_size << endl;
-        cout << "Block group number of superblock: " << superBlock.s_block_group_nr << endl;
-        cout << "Compatible feature set: " << superBlock.s_feature_compat << endl;
-        cout << "Incompatible feature set: " << superBlock.s_feature_incompat << endl;
-        cout << "Read-only compatible feature set: " << superBlock.s_feature_ro_compat << endl;
-        cout << "Volume UUID: " << superBlock.s_uuid << endl;
-        cout << "Volume Name: " << superBlock.s_volume_name << endl;
-        cout << "Directory where last mounted: " << superBlock.s_last_mounted << endl;
-        cout << "Compression algorithm usage bitmap: " << superBlock.s_algorithm_usage_bitmap << endl;
+        cout << "\nFirst non-reserved inode: " << superblock.s_first_ino << endl;
+        cout << "inode structure size: " << superblock.s_inode_size << endl;
+        cout << "Block group number of superblock: " << superblock.s_block_group_nr << endl;
+        cout << "Compatible feature set: " << superblock.s_feature_compat << endl;
+        cout << "Incompatible feature set: " << superblock.s_feature_incompat << endl;
+        cout << "Read-only compatible feature set: " << superblock.s_feature_ro_compat << endl;
+        cout << "Volume UUID: " << superblock.s_uuid << endl;
+        cout << "Volume Name: " << superblock.s_volume_name << endl;
+        cout << "Directory where last mounted: " << superblock.s_last_mounted << endl;
+        cout << "Compression algorithm usage bitmap: " << superblock.s_algorithm_usage_bitmap << endl;
     }
     
     
@@ -839,7 +1077,7 @@ namespace vdi_explorer
         u8* inode_buffer = nullptr;
         
         // Attempt to allocate and then verify memory for the inode buffer.
-        inode_buffer = new u8[EXT2_BLOCK_BASE_SIZE << superBlock.s_log_block_size];
+        inode_buffer = new u8[EXT2_BLOCK_BASE_SIZE << superblock.s_log_block_size];
         if (inode_buffer == nullptr)
         {
             cout << "Error allocating directory inode buffer.";
@@ -860,10 +1098,10 @@ namespace vdi_explorer
             vdi->vdiSeek(blockToOffset(inode.i_block[i]), SEEK_SET);
             
             // Read the contents of the block into memory, based on the given size.
-            vdi->vdiRead(inode_buffer, EXT2_BLOCK_BASE_SIZE << superBlock.s_log_block_size);
+            vdi->vdiRead(inode_buffer, EXT2_BLOCK_BASE_SIZE << superblock.s_log_block_size);
             
             // Iterate through the inode buffer, reading the directory entry records.
-            while (cursor < (EXT2_BLOCK_BASE_SIZE << superBlock.s_log_block_size))
+            while (cursor < (EXT2_BLOCK_BASE_SIZE << superblock.s_log_block_size))
             {
                 // Declare a new ext2_dir_entry every loop.
                 ext2_dir_entry to_add;
@@ -917,12 +1155,13 @@ namespace vdi_explorer
      * Type:    Function
      * Purpose: Read and parse a directory inode, returning the resulting list of directories and
      *          files in a vector container.
-     * Input:   u32 inode, containing an inode number.
-     * Output:  vector<ext2_dir_entry>, contains a vector holding the contents of the inode.
+     * Input:   u32 inode_num, containing the inode number of a directory inode.
+     * Output:  vector<ext2_dir_entry>, contains a vector holding the contents of the directory
+     *          inode.
     ----------------------------------------------------------------------------------------------*/
-    vector<ext2::ext2_dir_entry> ext2::parse_directory_inode(u32 inode)
+    vector<ext2::ext2_dir_entry> ext2::parse_directory_inode(u32 inode_num)
     {
-        return parse_directory_inode(readInode(inode));
+        return parse_directory_inode(readInode(inode_num));
     }
     
     
@@ -937,7 +1176,7 @@ namespace vdi_explorer
     ----------------------------------------------------------------------------------------------*/
     ext2::ext2_inode ext2::readInode(u32 inode)
     {
-        if (inode >= superBlock.s_inodes_count)
+        if (inode >= superblock.s_inodes_count)
         {
             cout << "inode out of bounds\n";
             throw;
@@ -1174,23 +1413,23 @@ namespace vdi_explorer
     
     void ext2::print_block(u32 block_to_dump, bool text)
     {
-        u8 * raw_block = new u8[EXT2_BLOCK_BASE_SIZE << superBlock.s_log_block_size];
+        u8 * raw_block = new u8[EXT2_BLOCK_BASE_SIZE << superblock.s_log_block_size];
         
         vdi->vdiSeek(blockToOffset(block_to_dump), SEEK_SET);
-        vdi->vdiRead(raw_block, (EXT2_BLOCK_BASE_SIZE << superBlock.s_log_block_size));
+        vdi->vdiRead(raw_block, (EXT2_BLOCK_BASE_SIZE << superblock.s_log_block_size));
         
         cout << "ext2::print_block\n";
         
         if (!text)
         {
-            for (u32 i = 0; i < (EXT2_BLOCK_BASE_SIZE << superBlock.s_log_block_size); i++)
+            for (u32 i = 0; i < (EXT2_BLOCK_BASE_SIZE << superblock.s_log_block_size); i++)
             {
                 cout << hex << setw(2) << setfill('0') << (int)raw_block[i] << ' ';
             }
         }
         else
         {
-            for (u32 i = 0; i < (EXT2_BLOCK_BASE_SIZE << superBlock.s_log_block_size); i++)
+            for (u32 i = 0; i < (EXT2_BLOCK_BASE_SIZE << superblock.s_log_block_size); i++)
             {
                 cout << raw_block[i] << ' ';
             }
@@ -1234,7 +1473,7 @@ namespace vdi_explorer
         u32 * t_ind_block_buffer = nullptr;
         
         // general algorithm for this function
-        // NOTE: THIS IS BRUTE FORCE AND UGLY AND NOT AT ALL OPTIMIZED AND IT MAKES ME FEEL DIRTY
+        // NOTE: THIS IS BRUTE FORCE AND UGLY AND NOT AT ALL OPTIMIZED AND MAKES ME FEEL DIRTY
         // @TODO: Optimize.
         // 
         // read inode
@@ -1376,6 +1615,83 @@ namespace vdi_explorer
         cout << "debug (ext2::make_block_list) leaving function\n";
         
         // Return the block list.
+        return to_return;
+    }
+    
+    
+    /*----------------------------------------------------------------------------------------------
+     * Name:    make_dir_entry
+     * Type:    Function
+     * Purpose: Takes the inputs given and returns an ext2_dir_entry structure.
+     * Input:   const u32 inode_number, holding the number of the inode to be included.
+     * Input:   const string & filename, holding the filename to be included.
+     * Input:   const u8 filetype, holding the filetype to be included.
+     * Output:  ext2_dir_entry, containing the resulting ext2_dir_entry.
+    ----------------------------------------------------------------------------------------------*/
+    ext2::ext2_dir_entry ext2::make_dir_entry(const u32 inode_number, const string & filename, const u8 filetype)
+    {
+        ext2_dir_entry to_return;
+        
+        // Set the majority of the fields in the the to_return variable.
+        to_return.inode = inode_number;
+        to_return.file_type = filetype;
+        to_return.name_len = filename.length();
+        to_return.name.assign(filename);
+        
+        // Calculate the record length and then pad it to make sure it aligns to a 4-byte boundary.
+        to_return.rec_len = EXT2_DIR_BASE_SIZE + to_return.name_len;
+        to_return.rec_len += to_return.rec_len % 4;
+        
+        // Return the newly-minted ext2_dir_entry structure.
+        return to_return;
+    }
+    
+    
+    /*----------------------------------------------------------------------------------------------
+     * Name:    read_bitmap
+     * Type:    Function
+     * Purpose: Reads a bitmap into memory and returns one that is a bit easier to work with, that
+     *          is, one that is simply a vector of type bool.
+     * Input:   const u32 block_num, holds the block that has the bitmap.
+     * Output:  vector<bool>, holds the more-easily-referenced bitmap.
+     *
+     * @TODO    Create another more abstract version of this and put it in the utility namespace.
+    ----------------------------------------------------------------------------------------------*/
+    vector<bool> ext2::read_bitmap(const u32 block_num)
+    {
+        vector<bool> to_return;
+        
+        // Create a buffer for reading the bitmap block.
+        u8 * bitmap_block_buffer = nullptr;
+        bitmap_block_buffer = new u8[block_size_actual];
+        if (bitmap_block_buffer == nullptr)
+        {
+            cout << "Error: Error allocating the bitmap block buffer. (ext2::read_bitmap)\n";
+            throw;
+        }
+        
+        // Seek to and read the bitmap into the buffer.
+        vdi->vdiSeek(blockToOffset(block_num), SEEK_SET);
+        vdi->vdiRead(bitmap_block_buffer, block_size_actual);
+        
+        // Process the bitmap.
+        for (u32 i = 0; i < block_size_actual; i++)
+        {
+            // Running out of time... let's do this quick and dirty-like.
+            to_return.push_back(bitmap_block_buffer[i] >> 7);
+            to_return.push_back((bitmap_block_buffer[i] << 1) >> 7);
+            to_return.push_back((bitmap_block_buffer[i] << 2) >> 7);
+            to_return.push_back((bitmap_block_buffer[i] << 3) >> 7);
+            to_return.push_back((bitmap_block_buffer[i] << 4) >> 7);
+            to_return.push_back((bitmap_block_buffer[i] << 5) >> 7);
+            to_return.push_back((bitmap_block_buffer[i] << 6) >> 7);
+            to_return.push_back((bitmap_block_buffer[i] << 7) >> 7);
+        }
+        
+        // Deallocate the bitmap block buffer.
+        delete[] bitmap_block_buffer;
+        
+        // Return the vectored bitmap.
         return to_return;
     }
 } // namespace vdi_explorer
