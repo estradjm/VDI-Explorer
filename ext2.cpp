@@ -725,7 +725,7 @@ namespace vdi_explorer
             for (u32 i = 0; i < num_s_blocks_to_write; i++)
             {
                 // Write a block at a time.
-                // Determine block size or . (block_size_actual or remainder size of the )
+                // Determine block size. (block_size_actual or remainder size of the block)
             }
             
             // Determine whether to write a full block's worth of block pointers or just enough to
