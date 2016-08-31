@@ -576,7 +576,7 @@ namespace vdi_explorer
         
         /***   Make a list of free blocks we plan on using.   ***/
         // Implement functions specifically for reading / writing bitmaps?
-        // What about using vector<bool>?
+        // What about using vector<bool>? Sure!
         //
         // algorithm
         //
@@ -1075,6 +1075,64 @@ namespace vdi_explorer
         //      the new block would have to be added to the i_block array.  The ext2_dir_entry for
         //      this file will still need to be added to its block, of course.
         
+        // Create a directory entry.
+        ext2_dir_entry file_dir_entry = make_dir_entry(inode_to_use,
+                                                       filename_to_write,
+                                                       EXT2_DIR_TYPE_FILE);
+        
+        // Check if an additional directory block is needed.
+        if(additional_dir_block_needed == false)
+        {
+            // No additional directory blocks are needed.
+            
+            // Adjust the record length of the file's directory entry so it goes to the end of the
+            // directory block.
+            file_dir_entry.rec_len = directory_entries.back().rec_len - 
+                                     ((EXT2_DIR_BASE_SIZE + directory_entries.back().name_len) + 
+                                      (EXT2_DIR_BASE_SIZE + directory_entries.back().name_len) % 4);
+            
+            // Reduce the record length of the current last entry in the direcory block to contain
+            // just itself, and align it to a 4-byte boundary.
+            directory_entries.back().rec_len = EXT2_DIR_BASE_SIZE + directory_entries.back().name_len;
+            directory_entries.back().rec_len += directory_entries.back().rec_len % 4;
+            
+            // Add the new file's directory entry to the end of the vector of directory entries.
+            directory_entries.push_back(file_dir_entry);
+            
+            // @TODO Write the two directory entries to disk.
+        }
+        else
+        {
+            // Additional directory block is needed.
+            
+            // Adjust the record length of the file's directory entry so it goes to the end of the
+            // directory block.
+            file_dir_entry.rec_len = block_size_actual;
+            
+            // Zero out the write buffer to ensure any garbage left behind is gone.
+            memset(write_buffer, 0, block_size_actual);
+            
+            // Copy over the main part of the directory entry into the buffer.
+            memcpy(write_buffer, &file_dir_entry, EXT2_DIR_BASE_SIZE);
+            
+            // Copy over the C-string representation of the name into the buffer.
+            memcpy(&(write_buffer[EXT2_DIR_BASE_SIZE]), &(file_dir_entry.name.c_str()), file_dir_entry.name_len);
+            
+            // Seek to and write the directory block.  This should be the last entry in the
+            // blocks_to_write vector.
+            vdi->vdiSeek(blockToOffset(blocks_to_write.back()), SEEK_SET);
+            vdi->vdiWrite(write_buffer, block_size_actual);
+            
+            // Read the directory inode for the directory that the file will reside in.
+            ext2_inode dir_inode = readInode(dir_inode_num);
+            
+            // @TODO Update the size field to account for the additional directory block.
+            // @TODO Update access and modification times.
+            // @TODO Update the blocks count.
+            // @TODO Add the new directory block to the i_block array.
+            // @TODO Write the updated inode back to the inode table.
+            
+        }
         /***   End build and add directory entry to directory block.   ***/
         
         
