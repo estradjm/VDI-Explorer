@@ -216,7 +216,7 @@ namespace vdi_explorer
             
             /*
              * The new version of the directory entry.  Since EXT2 structures are
-             * stored in intel byte order, and the name_len field could never be
+             * stored in intel byte order (little endian), and the name_len field could never be
              * bigger than 255 chars, it's safe to reclaim the extra byte for the
              * file_type field.
              */
@@ -239,6 +239,12 @@ namespace vdi_explorer
             size_t max_file_size = EXT2_MAX_ABS_FILE_SIZE;
             
             ext2_block_group_desc * bgdTable = nullptr;
+            
+            // Keep track of where the superblock starts.
+            off_t superblock_start = 0;
+            
+            // Keep track of where the block group descriptor table starts.
+            off_t bgd_table_start = 0;
             
             // a list of directories in order to keep track of the hierarchy
             // list<ext2_dir_entry> pwd;
@@ -266,8 +272,8 @@ namespace vdi_explorer
             ext2_dir_entry make_dir_entry(const u32, const string &, const u8);
             
             // Read and write bitmaps.
-            vector<bool> read_bitmap(const u32);
-            void write_bitmap(const vector<bool> &);
+            vector<bool> read_bitmap(const u32, const u64);
+            void write_bitmap(const vector<bool> &, const u32);
             
             // Debug functions.
             void print_inode(ext2_inode *);

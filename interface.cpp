@@ -166,7 +166,12 @@ namespace vdi_explorer
         
         if (direction == "in")
         {
-            cout << "Not implemented yet.\n";
+            os_file.open(copy_from, ios_base::in);
+            bool file_exists = os_file.good();
+            os_file.close();
+            
+            cout << "Being implemented now....\n";
+            
             return;
         }
         else if (direction == "out")

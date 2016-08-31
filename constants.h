@@ -8,10 +8,10 @@
 
 using namespace std;
 
-const int BITS_IN_BYTE = 8;
-const int BITS_IN_1K = 1024;
-const int BITS_IN_4K = 4096;
-const int BITS_IN_8K = 8192;
+const int BITS_PER_BYTE = 8;
+const int BITS_PER_1K = 1024;
+const int BITS_PER_4K = 4096;
+const int BITS_PER_8K = 8192;
 
 const int MBR_SIGNATURE = 0xaa55; // Magic number that serves as a signature to an MBR.
 const int MBR_SIZE_OF_BOOTSTRAP_CODE = 0x1be; // Length in bytes of the MBR's bootstrap code.
@@ -82,5 +82,8 @@ const int EXT2_DIR_TYPE_SYMLINK = 7;
 const string DELIMITER_SPACE = " ";
 const string DELIMITER_FSLASH = "/";
 const string DELIMITER_DOT = ".";
+
+const unsigned short EXT2_INODE_DEFAULT_UID = 1000; // Default user ID.  1000 = root
+const unsigned short EXT2_INODE_DEFAULT_GID = 1000; // Default group ID.  1000 = root
 
 #endif
