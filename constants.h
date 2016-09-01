@@ -35,6 +35,8 @@ const int EXT2_INODE_BLOCK_D_IND = EXT2_INODE_BLOCK_S_IND + 1; // Array location
 const int EXT2_INODE_BLOCK_T_IND = EXT2_INODE_BLOCK_D_IND + 1; // Array location of the triply indirect block pointer in an inode.
 const int EXT2_INODE_NBLOCKS_TOT = EXT2_INODE_BLOCK_T_IND + 1; // Total number of blocks in an inode.
 
+const int EXT2_INODE_IBLOCKS_SIZE = 512; // The size of each block represented by the i_blocks field in the ext2_inode structure.
+
 const int EXT2_INODE_TYPE_FIFO = 0x1000;
 const int EXT2_INODE_TYPE_CHARDEV = 0x2000;
 const int EXT2_INODE_TYPE_DIR = 0x4000;

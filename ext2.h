@@ -45,7 +45,7 @@ namespace vdi_explorer
             string get_pwd();
             void set_pwd(const string &);
             bool file_read(fstream &, const string &);
-            bool file_write(fstream &, string, const u32);
+            bool file_write(fstream &, string);
             
             // Public debug functions.
             void debug_dump_pwd_inode();
@@ -258,6 +258,7 @@ namespace vdi_explorer
             vector<ext2_dir_entry> parse_directory_inode(ext2_inode);
             vector<ext2_dir_entry> parse_directory_inode(u32);
             ext2_inode readInode(u32 inode);
+            // @TODO void write_inode(const ext2_inode &, const u32);
             // u32 bgd_starting_data_block(const u32);
             
             // @TODO convert to using commented prototype and function

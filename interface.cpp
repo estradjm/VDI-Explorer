@@ -166,12 +166,28 @@ namespace vdi_explorer
         
         if (direction == "in")
         {
-            os_file.open(copy_from, ios_base::in);
-            bool file_exists = os_file.good();
+            // cout << "Implementing... Please stand by.\n";
+            // return;
+            
+            // Attempt to open the file for input to check if it exists.
+            os_file.open(copy_from, ios_base::in | ios::binary);
+            
+            // Actually check if the file exists.
+            if (!os_file.good())
+            {
+                // File does not exist, so display an error.
+                cout << "Error: File does not exist.  (interface::command_cp)\n";
+            }
+            else
+            {
+                // File exists, so write it to the virtual disk.
+                file_system->file_write(os_file, copy_to);
+            }
+            
+            // Close the file.
             os_file.close();
             
-            cout << "Being implemented now....\n";
-            
+            // Return.  Duh.
             return;
         }
         else if (direction == "out")

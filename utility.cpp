@@ -93,4 +93,18 @@ namespace utility
         // Return the tokens.
         return to_return;
     }
+    
+    
+    /*----------------------------------------------------------------------------------------------
+     * Name:    nearest_mult_four
+     * Type:    Function
+     * Purpose: Calculate the nearest multiple of 4 that is equal to or greater than the argument.
+     * Input:   unsigned int value, contains the number to find the nearest multiple for.
+     * Output:  unsigned int, containing the nearest multiple of 4.
+    ----------------------------------------------------------------------------------------------*/
+    unsigned int nearest_mult_four(unsigned int value)
+    {
+        // Calculate the value and return.
+        return value + 4 * (value % 4 != 0) - value % 4;
+    }
 } // namespace utility

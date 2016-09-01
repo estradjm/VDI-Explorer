@@ -17,7 +17,7 @@
 #include <unistd.h>
 #include <cstring>
 
-#define DEBUG_VDI_WRITE_DISABLED
+//#define DEBUG_VDI_WRITE_DISABLED
 #define DEBUG_VDI_OUTPUT_TRANSLATION
 
 /* VDI reader should read the VDI header and populate the VDI header structure,

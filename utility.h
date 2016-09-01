@@ -28,4 +28,7 @@ namespace utility
     
     // tokenize a string based on a given delimiter
     vector<string> tokenize(const string &, const string &);
+    
+    // Find the nearest multiple of 4 greater than or equal to the provided value.
+    unsigned int nearest_mult_four(u32);
 }
