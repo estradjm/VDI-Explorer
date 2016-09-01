@@ -649,7 +649,8 @@ namespace vdi_explorer
             // Iterate through all the block groups.
             for (u32 i = 0; i < numBlockGroups && blocks_to_write.size() < total_num_blocks_needed; i++)
             {
-                // Iterate through the block group's block bitmap.
+                // Iterate through the block group's block bitmap, stopping when the end of the
+                // block is reached or when the required number of blocks to write has been reached.
                 for (u64 j = starting_data_block_offset; j < block_group_block_bitmaps[i].size() && blocks_to_write.size() < total_num_blocks_needed; j++)
                 {
                     // Check that the block is not in use.
@@ -661,11 +662,13 @@ namespace vdi_explorer
                         // Mark the bitmap dirty.
                         dirty_block_group_block_bitmaps[i] = true;
                         
-                        // Increment the number of used blocks in this block group.
+                        // Increment the number of used blocks in this block group. -> directly increment bdgTable[i].bg_free_blocks_count?
                         num_blocks_used_per_block_group[i] += 1;
                         
                         // Add the block to the list of blocks to write.
-                        blocks_to_write.push_back(bgdTable[i].bg_block_bitmap + i);
+                        // (bgdTable[i].bg_block_bitmap serves as the base block for that block
+                        // group, so you just need to add 'j' to it to get the actual block number.)
+                        blocks_to_write.push_back(bgdTable[i].bg_block_bitmap + j);
                     }
                 }
             }
