@@ -754,10 +754,14 @@ namespace vdi_explorer
         // Check if there is a need to write the singly indirect block.
         if (blocks_to_write.size() > EXT2_INODE_NBLOCKS_DIR)
         {
+            // Establish a variable to keep track of the current index of the block pointers in the
+            // blocks_to_write vector to be written into singly indirect blocks.
+            u32 blocks_index = EXT2_INODE_NBLOCKS_DIR;
+            
             // Determine the total number of singly indirect blocks that will need to be written.
             u32 num_s_blocks_to_write = ((blocks_to_write.size() - EXT2_INODE_NBLOCKS_DIR) % s_num_block_pointers ?
                                          (blocks_to_write.size() - EXT2_INODE_NBLOCKS_DIR) / s_num_block_pointers + 1 :
-                                         (blocks_to_write.size() - EXT2_INODE_NBLOCKS_DIR));
+                                         (blocks_to_write.size() - EXT2_INODE_NBLOCKS_DIR) / s_num_block_pointers);
             
             // Write all the singly indirect blocks at once.
             for (u32 i = 0; i < num_s_blocks_to_write; i++)
@@ -767,15 +771,15 @@ namespace vdi_explorer
                 // This calculation is to determine the number of blocks that will be written, that
                 // is, a full block's worth of block pointers, or just until the end of the
                 // blocks_to_write vector.
-                size_t bytes_to_copy = (EXT2_INODE_NBLOCKS_DIR + i + s_num_block_pointers < blocks_to_write.size() ?
+                size_t bytes_to_copy = (blocks_index + s_num_block_pointers < blocks_to_write.size() - supporting_blocks_needed ?
                                         s_num_block_pointers :
-                                        blocks_to_write.size() - EXT2_INODE_NBLOCKS_DIR - i);
+                                        blocks_to_write.size() - supporting_blocks_needed - blocks_index);
                 // Convert the number of blocks to the number of bytes.
                 bytes_to_copy *= EXT2_BLOCK_POINTER_SIZE;
                 
                 // Copy bytes_to_copy bytes to the write buffer.
                 memcpy(write_buffer,
-                       &(blocks_to_write.data()[EXT2_INODE_NBLOCKS_DIR + i]),
+                       &(blocks_to_write.data()[blocks_index]),
                        bytes_to_copy);
                 
                 // Fill the rest of the write buffer with zeroes.
@@ -793,6 +797,9 @@ namespace vdi_explorer
                 
                 // Increment the indirect block index.
                 indirect_block_index++;
+                
+                // Increment the block index.
+                blocks_index += bytes_to_copy / EXT2_BLOCK_POINTER_SIZE;
             }
             
             // Check if we need to write doubly indirect blocks.
