@@ -25,7 +25,3 @@
   * `./vdi Test-dynamic-1k.vdi`</li>
   * `./vdi Test-fixed-4k.vdi`</li>
   * `./vdi Test-fixed-1k.vdi`</li>
-
-
-##License: 
-Apache ver. 2.0, Copyright Jenniffer Estrada, 2016
