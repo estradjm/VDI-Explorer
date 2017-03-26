@@ -15,16 +15,21 @@
 
 ## Installation:
 <p>To compile the project, type in the following commands: </p>
-  * `make`
+
+` make `
 
 <p>To remove all object files and executables:</p>
-  * `make clean`
+
+` make clean `
 
 ## Example:
 <p>To run, depending on which file you want to give in as the VDI input file:</p>
-  * `./vdi Test-dynamic-1k.vdi`</li>
-  * `./vdi Test-fixed-4k.vdi`</li>
-  * `./vdi Test-fixed-1k.vdi`</li>
+
+` ./vdi Test-dynamic-1k.vdi `
+
+` ./vdi Test-fixed-4k.vdi `
+
+` ./vdi Test-fixed-1k.vdi `
 
 ## License: 
 Apache ver. 2.0, Copyright Jenniffer Estrada, 2016
