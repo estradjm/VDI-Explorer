@@ -19,11 +19,7 @@
 ## Installation:
 <p>To compile the project, type in the following commands: </p>
 
-` mkdir build ` 
-
-` cd build `
-
-` make .. `
+` chmod +x build.sh && ./build.sh && cd build` 
 
 <p>To remove all object files and executables:</p>
 
