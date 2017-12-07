@@ -29,7 +29,7 @@ $(EXECUTABLE): $(OBJECTS)
 	$(CC) $(CFLAGS) $< -o $@
 
 clean:
-	rm $(OBJECTS) $(EXECUTABLE)
+	rm build/$(EXECUTABLE)
 
 clean_debug:
 	rm $(OBJECTS) $(EXECUTABLE) $(MISCDEBUG)
