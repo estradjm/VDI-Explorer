@@ -1,6 +1,6 @@
 # <b> VDI Explorer</b> : <em>Break Out Of The BOX</em>
 
-[![License](https://img.shields.io/badge/License-Apache%202.0-blue.svg)](https://github.com/estradjm/VDI-Explorer/blob/master/LICENSE.md)
+[![License](https://img.shields.io/badge/License-Apache%202.0-blue.svg)](https://github.com/estradjm/VDI-Explorer/blob/master/docs/LICENSE.md)
 
 <p>Traversal and manipulation of an EXT2 Filesystem contained in VirtualBox .VDI File, without mounting in a virtual machine.</p>
 
