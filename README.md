@@ -19,7 +19,11 @@
 ## Installation:
 <p>To compile the project, type in the following commands: </p>
 
-` make `
+` mkdir build ` 
+
+` cd build `
+
+` make .. `
 
 <p>To remove all object files and executables:</p>
 
