@@ -35,4 +35,4 @@
 ` ./vdi Test-fixed-1k.vdi `
 
 ## License: 
-Apache ver. 2.0, Copyright Jenniffer Estrada, 2016
+Apache ver. 2.0, Copyright Jenniffer Estrada, 2016  
