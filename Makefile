@@ -3,7 +3,9 @@
 CC=gcc
 
 # Compiler flags
-CFLAGS=-c -Wall -g -O0 -std=c++11 -fprofile-arcs -ftest-coverage
+CFLAGS=-Wall -g -std=c++11 -fprofile-arcs -ftest-coverage
+#CFLAGS=-c -Wall -g -O0 -std=c++11 
+
 
 # Linker flags
 LDFLAGS=
