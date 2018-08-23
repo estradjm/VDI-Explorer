@@ -1,6 +1,5 @@
 # Compiler
-#CC=g++
-CC=gcc
+CC=g++
 
 # Compiler flags
 CFLAGS=-Wall -g -std=c++11 -fprofile-arcs -ftest-coverage
@@ -8,7 +7,7 @@ CFLAGS=-Wall -g -std=c++11 -fprofile-arcs -ftest-coverage
 
 
 # Linker flags
-LDFLAGS=
+LDFLAGS= -L /usr/lib -I/usr/include
 
 # Source files
 SOURCES=src/main.cpp src/ext2.cpp src/interface.cpp src/utility.cpp src/vdi_reader.cpp
