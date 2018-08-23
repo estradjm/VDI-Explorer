@@ -2,9 +2,10 @@
 
 echo 'compiling source ...'
 make
-mkdir build
-cp -f vdi build/
-rm -f vdi
+make install
+#mkdir build
+#cp -f vdi build/
+#rm -f vdi
 echo 'successful compilation...'
 
 
