@@ -1,7 +1,7 @@
 # <b> VDI Explorer</b> : <em>Break Out Of The BOX</em>
 
 [![License](https://img.shields.io/badge/License-Apache%202.0-blue.svg)](https://github.com/estradjm/VDI-Explorer/blob/master/LICENSE.md)
-[ ![Codeship Status for estradjm/VDI-Explorer](https://app.codeship.com/projects/3657a050-892d-0136-c8f3-1a20a48ae94f/status?branch=master)](https://app.codeship.com/projects/303011)
+<!--- [ ![Codeship Status for estradjm/VDI-Explorer](https://app.codeship.com/projects/3657a050-892d-0136-c8f3-1a20a48ae94f/status?branch=master)](https://app.codeship.com/projects/303011) -->
 
 <p>Traversal and manipulation of an EXT2 Filesystem contained in VirtualBox .VDI File, without mounting in a virtual machine.</p>
 
